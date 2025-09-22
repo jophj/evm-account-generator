@@ -2,7 +2,7 @@ mod evm_key_generator;
 mod rng;
 mod dev_random_rng;
 
-use evm_key_generator::{PrivateKey, ToHex, generate_private_key_with_rng, generate_private_key_bytes, is_valid_private_key};
+use evm_key_generator::{PrivateKey, ToHex, GetAddress, generate_private_key_with_rng, generate_private_key_bytes, is_valid_private_key};
 use dev_random_rng::DevRandomRng;
 
 fn main() {
@@ -13,6 +13,8 @@ fn main() {
     let mut rng = rand::thread_rng();
     let private_key = generate_private_key_with_rng(&mut rng);
     println!("Generated private key: {}", private_key.to_hex());
+    println!("Address: {}", private_key.get_address());
+
 
     // Demonstrate ToHex trait usage
     println!("Using ToHex trait: {}", private_key.to_hex());

@@ -1,14 +1,20 @@
+use crate::rng::RandomBytes32;
 /// EVM Private Key Generator Module
 ///
 /// This module provides functionality to generate EVM private keys.
 /// Uses cryptographically secure random number generation.
 use hex;
-use crate::rng::RandomBytes32;
+use keccak_asm::{Digest, Keccak256};
+use secp256k1::{PublicKey, Secp256k1, SecretKey};
 
 /// Trait for converting types to hexadecimal representation
 pub trait ToHex {
     /// Converts the type to a hexadecimal string with 0x prefix
     fn to_hex(&self) -> String;
+}
+
+pub trait GetAddress {
+    fn get_address(&self) -> String;
 }
 
 /// Represents an EVM private key
@@ -65,6 +71,38 @@ impl ToHex for PrivateKey {
     }
 }
 
+impl GetAddress for PrivateKey {
+    fn get_address(&self) -> String {
+        // Create secp256k1 context
+        let secp = Secp256k1::new();
+
+        // Create secret key from private key bytes
+        let secret_key =
+            SecretKey::from_slice(&self.bytes).expect("Private key should be valid for secp256k1");
+
+        // Derive public key
+        let public_key = PublicKey::from_secret_key(&secp, &secret_key);
+
+        // Get uncompressed public key bytes (65 bytes: 0x04 + 32 bytes x + 32 bytes y)
+        let public_key_bytes = public_key.serialize_uncompressed();
+
+        // Take only the x and y coordinates (skip the 0x04 prefix)
+        let public_key_coords = &public_key_bytes[1..];
+
+        // Hash the public key coordinates with Keccak256
+        let mut hasher = Keccak256::new();
+        hasher.update(public_key_coords);
+        let hash = hasher.finalize();
+
+        // Take the last 20 bytes of the hash as the address
+        let address_bytes = &hash[12..32];
+
+        // Convert to hex string and apply EIP-55 checksumming
+        format!("0x{}", hex::encode(address_bytes))
+        // TODO: apply EIP-55 checksumming
+    }
+}
+
 /// Generates a cryptographically secure EVM private key using a provided RNG
 ///
 /// # Arguments
@@ -98,7 +136,6 @@ pub fn generate_private_key_with_rng<R: RandomBytes32>(rng: &mut R) -> PrivateKe
         }
     }
 }
-
 
 /// Checks if a byte array is all zeros
 fn is_zero(bytes: &[u8; 32]) -> bool {
@@ -188,7 +225,10 @@ mod tests {
 
     impl MockRng {
         fn new(bytes: [u8; 32]) -> Self {
-            Self { bytes, call_count: 0 }
+            Self {
+                bytes,
+                call_count: 0,
+            }
         }
     }
 
@@ -355,7 +395,7 @@ mod tests {
 
         assert_eq!(key, expected_key);
         assert_eq!(key.to_hex(), expected_key.to_hex());
-        
+
         // Verify that the mock RNG was called twice (once for zeros, once for valid bytes)
         assert_eq!(mock_rng.call_count, 2);
     }
@@ -365,28 +405,39 @@ mod tests {
         // Test with real RNG
         let mut rng = rand::thread_rng();
         let key = generate_private_key_with_rng(&mut rng);
-        
+
         // Verify the generated key is valid
         assert!(is_valid_private_key(&key.to_hex()));
         assert_eq!(key.to_hex().len(), 66); // 0x + 64 hex chars
         assert!(key.to_hex().starts_with("0x"));
     }
 
-
     #[test]
     fn test_composability_with_different_rngs() {
         // Test that we can use different RNG implementations
         let test_bytes1 = [1u8; 32];
         let test_bytes2 = [2u8; 32];
-        
+
         let mut mock_rng1 = MockRng::new(test_bytes1);
         let mut mock_rng2 = MockRng::new(test_bytes2);
-        
+
         let key1 = generate_private_key_with_rng(&mut mock_rng1);
         let key2 = generate_private_key_with_rng(&mut mock_rng2);
-        
+
         // Keys should be different because they use different mock data
         assert_ne!(key1, key2);
         assert_ne!(key1.to_hex(), key2.to_hex());
+    }
+
+    #[test]
+    fn test_get_address() {
+        let key = PrivateKey::from_hex(
+            "0x126824047ad2ca09f61950ca590520caa7247871ac15e0ccc931ebab91a1037c",
+        )
+        .unwrap();
+        assert_eq!(
+            key.get_address(),
+            "0x80C1109a04da741d485678967a6172bEC411A66B".to_lowercase()
+        );
     }
 }
