@@ -1,8 +1,7 @@
 //! EVM private key generation functions
 
 use crate::crypto::EVMPrivateKey;
-use crate::crypto::private_key::{FromBytes, PrivateKey};
-use crate::rng::RandomBytes32;
+use crate::traits::{FromBytes, PrivateKey, RandomBytes32};
 
 /// Generates a cryptographically secure EVM private key using a provided RNG
 ///
@@ -17,8 +16,7 @@ use crate::rng::RandomBytes32;
 /// # Example
 ///
 /// ```
-/// use evm_account_generator::crypto::{generate_private_key_with_rng, PrivateKey};
-/// use evm_account_generator::types::ToHex;
+/// use evm_account_generator::{generate_private_key_with_rng, PrivateKey};
 /// use rand::thread_rng;
 ///
 /// let mut rng = thread_rng();
@@ -50,7 +48,7 @@ pub fn generate_private_key_with_rng<R: RandomBytes32>(rng: &mut R) -> EVMPrivat
 /// # Example
 ///
 /// ```
-/// use evm_account_generator::crypto::generate_private_key_bytes;
+/// use evm_account_generator::generate_private_key_bytes;
 ///
 /// let private_key_bytes = generate_private_key_bytes();
 /// println!("Generated private key bytes: {:?}", private_key_bytes);
@@ -94,7 +92,7 @@ fn is_valid_secp256k1_key(bytes: &[u8; 32]) -> bool {
 mod tests {
     use super::*;
     use crate::rng::mock::MockRng;
-    use crate::types::ToHex;
+    use crate::traits::{ToHex, FromHex, PrivateKey};
 
     #[test]
     fn test_generate_private_key_with_explicit_rng() {
@@ -174,7 +172,7 @@ mod tests {
         let mut mock_rng = MockRng::new(test_bytes);
 
         let key = generate_private_key_with_rng(&mut mock_rng);
-        let expected_key = EVMPrivateKey::from_bytes(test_bytes);
+        let expected_key = EVMPrivateKey::from_bytes(test_bytes).unwrap();
 
         assert_eq!(key.to_hex(), expected_key.to_hex());
 

@@ -6,7 +6,7 @@
 //! # Quick Start
 //!
 //! ```rust
-//! use evm_account_generator::{generate_private_key_with_rng, ToHex};
+//! use evm_account_generator::{generate_private_key_with_rng, PrivateKey};
 //! use rand::thread_rng;
 //!
 //! let mut rng = thread_rng();
@@ -16,7 +16,7 @@
 
 pub mod crypto;
 pub mod rng;
-pub mod types;
+pub mod traits;
 pub mod error;
 
 // Re-export the main types and functions for easier access
@@ -27,6 +27,6 @@ pub use crypto::{
     is_valid_private_key
 };
 
-pub use rng::{RandomBytes32, DevRandomRng};
-pub use types::{ToHex, GetAddress};
+pub use rng::DevRandomRng;
+pub use traits::{ToHex, GetAddress, PrivateKey, FromHex, FromBytes, RandomBytes32};
 pub use error::{EvmError, Result};

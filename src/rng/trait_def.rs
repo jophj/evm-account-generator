@@ -1,21 +1,9 @@
 //! Random number generation trait definition
+//! 
+//! Note: The RandomBytes32 trait is now defined in crate::traits
+//! This module re-exports it for backward compatibility.
 
-use rand::RngCore;
-
-/// Trait for generating 32 random bytes for private key generation
-pub trait RandomBytes32 {
-    /// Generates 32 random bytes
-    fn random_bytes_32(&mut self) -> [u8; 32];
-}
-
-/// Implementation of RandomBytes32 for any type that implements RngCore
-impl<T: RngCore> RandomBytes32 for T {
-    fn random_bytes_32(&mut self) -> [u8; 32] {
-        let mut bytes = [0u8; 32];
-        self.fill_bytes(&mut bytes);
-        bytes
-    }
-}
+pub use crate::traits::RandomBytes32;
 
 #[cfg(test)]
 mod tests {

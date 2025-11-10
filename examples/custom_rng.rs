@@ -1,6 +1,6 @@
 //! Custom RNG implementation example
 
-use evm_account_generator::{RandomBytes32, generate_private_key_with_rng, ToHex};
+use evm_account_generator::{RandomBytes32, generate_private_key_with_rng, PrivateKey};
 
 /// A simple deterministic RNG for demonstration purposes
 /// WARNING: This is NOT cryptographically secure and should never be used in production!

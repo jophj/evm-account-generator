@@ -1,5 +1,6 @@
 use evm_account_generator::{
-    DevRandomRng, EVMPrivateKey, GetAddress, ToHex, crypto::private_key::{FromHex, PrivateKey}, generate_private_key_bytes, generate_private_key_with_rng, is_valid_private_key
+    DevRandomRng, EVMPrivateKey, FromHex, PrivateKey,
+    generate_private_key_bytes, generate_private_key_with_rng, is_valid_private_key
 };
 
 fn main() {

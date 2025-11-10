@@ -2,7 +2,7 @@
 
 use evm_account_generator::{
     generate_private_key_with_rng, generate_private_key_bytes, is_valid_private_key,
-    EVMPrivateKey, ToHex, GetAddress, RandomBytes32
+    EVMPrivateKey, ToHex, GetAddress, RandomBytes32, FromHex, PrivateKey
 };
 use rand::thread_rng;
 

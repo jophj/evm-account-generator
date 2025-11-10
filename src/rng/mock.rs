@@ -1,6 +1,6 @@
 //! Mock RNG implementation for testing
 
-use crate::rng::RandomBytes32;
+use crate::traits::RandomBytes32;
 
 /// Mock RNG for deterministic testing
 pub struct MockRng {

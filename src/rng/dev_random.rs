@@ -5,7 +5,7 @@
 
 use std::fs::File;
 use std::io::Read;
-use crate::rng::RandomBytes32;
+use crate::traits::RandomBytes32;
 use crate::error::{EvmError, Result};
 
 /// A random number generator that reads from /dev/random
@@ -23,7 +23,7 @@ impl DevRandomRng {
     /// # Example
     /// 
     /// ```
-    /// use evm_account_generator::rng::DevRandomRng;
+    /// use evm_account_generator::DevRandomRng;
     /// 
     /// let rng = DevRandomRng::new().expect("Failed to open /dev/random");
     /// ```
@@ -92,7 +92,7 @@ mod tests {
     fn test_dev_random_rng_with_key_generation() {
         // Test integration with key generation
         use crate::crypto::generate_private_key_with_rng;
-        use crate::types::ToHex;
+        use crate::traits::{ToHex, PrivateKey};
         
         if let Ok(mut rng) = DevRandomRng::new() {
             let key = generate_private_key_with_rng(&mut rng);

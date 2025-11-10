@@ -1,7 +1,7 @@
 //! EVM Private Key implementation
 
 use crate::error::{EvmError, Result};
-use crate::types::{ToHex, GetAddress};
+use crate::traits::{FromHex, FromBytes, PrivateKey};
 use hex;
 use keccak_asm::{Digest, Keccak256};
 use secp256k1::{PublicKey, Secp256k1, SecretKey};
@@ -12,20 +12,7 @@ pub struct EVMPrivateKey {
     bytes: [u8; 32],
 }
 
-pub trait FromHex {
-    fn from_hex(hex_str: &str) -> Result<EVMPrivateKey>;
-}
-
-pub trait FromBytes {
-    fn from_bytes(bytes: [u8; 32]) -> Result<EVMPrivateKey>;
-}
-
-pub trait PrivateKey {
-    fn as_bytes(&self) -> &[u8; 32];
-    fn to_bytes(&self) -> Vec<u8>;
-    fn to_hex(&self) -> String;
-    fn get_address(&self) -> String;
-}
+// Traits are now imported from crate::traits
 
 impl FromBytes for EVMPrivateKey {
     fn from_bytes(bytes: [u8; 32]) -> Result<Self> {

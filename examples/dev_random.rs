@@ -1,6 +1,6 @@
 //! DevRandomRng usage example (Unix systems only)
 
-use evm_account_generator::{DevRandomRng, generate_private_key_with_rng, ToHex, GetAddress};
+use evm_account_generator::{DevRandomRng, generate_private_key_with_rng, PrivateKey};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("EVM Account Generator - DevRandomRng Example");

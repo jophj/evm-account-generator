@@ -1,6 +1,7 @@
 //! Private key validation functions
 
 use crate::crypto::EVMPrivateKey;
+use crate::traits::FromHex;
 
 /// Validates if a string is a valid EVM private key format
 ///
@@ -15,12 +16,11 @@ use crate::crypto::EVMPrivateKey;
 /// # Example
 ///
 /// ```
-/// use evm_account_generator::crypto::is_valid_private_key;
+/// use evm_account_generator::is_valid_private_key;
 ///
 /// let key = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
 /// assert!(is_valid_private_key(key));
 /// ```
-use crate::crypto::private_key::FromHex;
 
 pub fn is_valid_private_key(key: &str) -> bool {
     EVMPrivateKey::from_hex(key).is_ok()
@@ -30,7 +30,7 @@ pub fn is_valid_private_key(key: &str) -> bool {
 mod tests {
     use super::*;
     use crate::crypto::generate_private_key_with_rng;
-    use crate::types::ToHex;
+    use crate::traits::{ToHex, PrivateKey};
 
     const TEST_PRIVATE_KEY: &str =
         "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
