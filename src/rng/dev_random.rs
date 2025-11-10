@@ -1,11 +1,12 @@
-/// Dev Random RNG Module
-///
-/// This module provides a random number generator that reads from /dev/random
-/// without external dependencies, using only the standard library.
+//! Dev Random RNG implementation
+//!
+//! This module provides a random number generator that reads from /dev/random
+//! without external dependencies, using only the standard library.
 
 use std::fs::File;
 use std::io::Read;
 use crate::rng::RandomBytes32;
+use crate::error::{EvmError, Result};
 
 /// A random number generator that reads from /dev/random
 pub struct DevRandomRng {
@@ -22,12 +23,13 @@ impl DevRandomRng {
     /// # Example
     /// 
     /// ```
-    /// use evm_account_generator::dev_random_rng::DevRandomRng;
+    /// use evm_account_generator::rng::DevRandomRng;
     /// 
     /// let rng = DevRandomRng::new().expect("Failed to open /dev/random");
     /// ```
-    pub fn new() -> Result<Self, std::io::Error> {
-        let file = File::open("/dev/random")?;
+    pub fn new() -> Result<Self> {
+        let file = File::open("/dev/random")
+            .map_err(|e| EvmError::RngInitFailed(format!("Failed to open /dev/random: {}", e)))?;
         Ok(DevRandomRng { file })
     }
 }
@@ -89,7 +91,8 @@ mod tests {
     #[cfg(unix)]
     fn test_dev_random_rng_with_key_generation() {
         // Test integration with key generation
-        use crate::evm_key_generator::{generate_private_key_with_rng, ToHex};
+        use crate::crypto::generate_private_key_with_rng;
+        use crate::types::ToHex;
         
         if let Ok(mut rng) = DevRandomRng::new() {
             let key = generate_private_key_with_rng(&mut rng);

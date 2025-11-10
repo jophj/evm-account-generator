@@ -1,9 +1,8 @@
-mod evm_key_generator;
-mod rng;
-mod dev_random_rng;
-
-use evm_key_generator::{PrivateKey, ToHex, GetAddress, generate_private_key_with_rng, generate_private_key_bytes, is_valid_private_key};
-use dev_random_rng::DevRandomRng;
+use evm_account_generator::{
+    PrivateKey, ToHex, GetAddress, 
+    generate_private_key_with_rng, generate_private_key_bytes, is_valid_private_key,
+    DevRandomRng
+};
 
 fn main() {
     println!("EVM Account Generator");

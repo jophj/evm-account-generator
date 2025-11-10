@@ -1,10 +1,35 @@
 [package]
 name = "evm-account-generator"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
+authors = ["Your Name <your.email@example.com>"]
+description = "A Rust library for generating cryptographically secure EVM private keys with composable RNG architecture"
+license = "MIT"
+repository = "https://github.com/yourusername/evm-account-generator"
+keywords = ["ethereum", "evm", "crypto", "private-key", "blockchain"]
+categories = ["cryptography", "development-tools"]
+readme = "README.md"
+
+[[bin]]
+name = "evm-account-generator"
+path = "src/main.rs"
+
+[lib]
+name = "evm_account_generator"
+path = "src/lib.rs"
 
 [dependencies]
 hex = "0.4"
 keccak-asm = "0.1.4"
 rand = "0.8"
 secp256k1 = "0.29"
+
+[dev-dependencies]
+# Add any test-specific dependencies here
+
+[features]
+default = ["std"]
+std = []
+
+# Optional features
+dev-random = [] # Enable /dev/random support

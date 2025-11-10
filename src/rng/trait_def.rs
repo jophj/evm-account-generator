@@ -1,7 +1,4 @@
-/// Random Number Generator Module
-///
-/// This module provides traits and implementations for generating random bytes
-/// used in cryptographic key generation.
+//! Random number generation trait definition
 
 use rand::RngCore;
 
