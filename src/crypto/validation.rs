@@ -1,6 +1,6 @@
 //! Private key validation functions
 
-use crate::crypto::PrivateKey;
+use crate::crypto::EVMPrivateKey;
 
 /// Validates if a string is a valid EVM private key format
 ///
@@ -20,8 +20,10 @@ use crate::crypto::PrivateKey;
 /// let key = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
 /// assert!(is_valid_private_key(key));
 /// ```
+use crate::crypto::private_key::FromHex;
+
 pub fn is_valid_private_key(key: &str) -> bool {
-    PrivateKey::from_hex(key).is_ok()
+    EVMPrivateKey::from_hex(key).is_ok()
 }
 
 #[cfg(test)]

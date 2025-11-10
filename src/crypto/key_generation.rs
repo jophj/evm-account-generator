@@ -1,6 +1,7 @@
 //! EVM private key generation functions
 
-use crate::crypto::PrivateKey;
+use crate::crypto::EVMPrivateKey;
+use crate::crypto::private_key::{FromBytes, PrivateKey};
 use crate::rng::RandomBytes32;
 
 /// Generates a cryptographically secure EVM private key using a provided RNG
@@ -24,7 +25,7 @@ use crate::rng::RandomBytes32;
 /// let private_key = generate_private_key_with_rng(&mut rng);
 /// println!("Generated private key: {}", private_key.to_hex());
 /// ```
-pub fn generate_private_key_with_rng<R: RandomBytes32>(rng: &mut R) -> PrivateKey {
+pub fn generate_private_key_with_rng<R: RandomBytes32>(rng: &mut R) -> EVMPrivateKey {
     loop {
         // Generate random bytes
         let bytes = rng.random_bytes_32();
@@ -33,7 +34,7 @@ pub fn generate_private_key_with_rng<R: RandomBytes32>(rng: &mut R) -> PrivateKe
         // The secp256k1 curve order is: 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
         // We'll use a simple check: ensure it's not zero and not too large
         if !is_zero(&bytes) && is_valid_secp256k1_key(&bytes) {
-            return PrivateKey::from_bytes(bytes);
+            return EVMPrivateKey::from_bytes(bytes).unwrap();
         }
     }
 }
@@ -133,7 +134,7 @@ mod tests {
 
         // Verify the bytes form a valid private key
         let hex_string = format!("0x{}", hex::encode(&bytes));
-        let key = PrivateKey::from_hex(&hex_string);
+        let key = EVMPrivateKey::from_hex(&hex_string);
         assert!(key.is_ok());
     }
 
@@ -173,7 +174,7 @@ mod tests {
         let mut mock_rng = MockRng::new(test_bytes);
 
         let key = generate_private_key_with_rng(&mut mock_rng);
-        let expected_key = PrivateKey::from_bytes(test_bytes);
+        let expected_key = EVMPrivateKey::from_bytes(test_bytes);
 
         assert_eq!(key.to_hex(), expected_key.to_hex());
 

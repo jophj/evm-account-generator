@@ -21,7 +21,7 @@ pub mod error;
 
 // Re-export the main types and functions for easier access
 pub use crypto::{
-    PrivateKey, 
+    EVMPrivateKey, 
     generate_private_key_with_rng,
     generate_private_key_bytes, 
     is_valid_private_key

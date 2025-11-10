@@ -2,7 +2,7 @@
 
 use evm_account_generator::{
     generate_private_key_with_rng, generate_private_key_bytes, is_valid_private_key,
-    PrivateKey, ToHex, GetAddress, RandomBytes32
+    EVMPrivateKey, ToHex, GetAddress, RandomBytes32
 };
 use rand::thread_rng;
 
@@ -15,13 +15,13 @@ fn test_end_to_end_key_generation() {
     let hex = private_key.to_hex();
     assert!(is_valid_private_key(&hex));
     
-    let reconstructed = PrivateKey::from_hex(&hex).unwrap();
+    let reconstructed = EVMPrivateKey::from_hex(&hex).unwrap();
     assert_eq!(private_key.to_hex(), reconstructed.to_hex());
 }
 
 #[test]
 fn test_address_generation() {
-    let private_key = PrivateKey::from_hex(
+    let private_key = EVMPrivateKey::from_hex(
         "0x126824047ad2ca09f61950ca590520caa7247871ac15e0ccc931ebab91a1037c"
     ).unwrap();
     
@@ -68,9 +68,9 @@ fn test_error_handling() {
     assert!(!is_valid_private_key("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdefg"));
     
     // Test PrivateKey creation errors
-    assert!(PrivateKey::from_hex("").is_err());
-    assert!(PrivateKey::from_hex("0x123").is_err());
-    assert!(PrivateKey::from_hex("invalid").is_err());
+    assert!(EVMPrivateKey::from_hex("").is_err());
+    assert!(EVMPrivateKey::from_hex("0x123").is_err());
+    assert!(EVMPrivateKey::from_hex("invalid").is_err());
 }
 
 /// Mock RNG for deterministic testing

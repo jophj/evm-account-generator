@@ -1,7 +1,5 @@
 use evm_account_generator::{
-    PrivateKey, ToHex, GetAddress, 
-    generate_private_key_with_rng, generate_private_key_bytes, is_valid_private_key,
-    DevRandomRng
+    DevRandomRng, EVMPrivateKey, GetAddress, ToHex, crypto::private_key::{FromHex, PrivateKey}, generate_private_key_bytes, generate_private_key_with_rng, is_valid_private_key
 };
 
 fn main() {
@@ -51,7 +49,7 @@ fn main() {
     
     // Test creating PrivateKey from hex
     println!("\nPrivateKey creation tests:");
-    match PrivateKey::from_hex("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef") {
+    match EVMPrivateKey::from_hex("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef") {
         Ok(key) => println!("Created PrivateKey from hex: {}", key.to_hex()),
         Err(e) => println!("Error creating PrivateKey: {}", e),
     }
@@ -64,12 +62,12 @@ fn main() {
     
     // Demonstrate error handling
     println!("\nError handling tests:");
-    match PrivateKey::from_hex("0x123") {
+    match EVMPrivateKey::from_hex("0x123") {
         Ok(key) => println!("Unexpected success: {}", key.to_hex()),
         Err(e) => println!("Expected error for short key: {}", e),
     }
     
-    match PrivateKey::from_hex("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdefg") {
+    match EVMPrivateKey::from_hex("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdefg") {
         Ok(key) => println!("Unexpected success: {}", key.to_hex()),
         Err(e) => println!("Expected error for invalid hex: {}", e),
     }
