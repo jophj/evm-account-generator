@@ -31,7 +31,7 @@ pub fn generate_private_key_with_rng<R: RandomBytes32>(rng: &mut R) -> EVMPrivat
         // Ensure the private key is valid for secp256k1 (must be < curve order)
         // The secp256k1 curve order is: 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
         // We'll use a simple check: ensure it's not zero and not too large
-        if !is_zero(&bytes) && is_valid_secp256k1_key(&bytes) {
+        if is_valid_secp256k1_key(&bytes) {
             return EVMPrivateKey::from_bytes(bytes).unwrap();
         }
     }
@@ -57,11 +57,6 @@ pub fn generate_private_key_with_rng<R: RandomBytes32>(rng: &mut R) -> EVMPrivat
 pub fn generate_private_key_bytes() -> Vec<u8> {
     let mut rng = rand::thread_rng();
     generate_private_key_with_rng(&mut rng).to_bytes()
-}
-
-/// Checks if a byte array is all zeros
-fn is_zero(bytes: &[u8; 32]) -> bool {
-    bytes.iter().all(|&b| b == 0)
 }
 
 /// Checks if a private key is valid for secp256k1
@@ -116,15 +111,6 @@ mod tests {
         let hex_string = format!("0x{}", hex::encode(&bytes));
         let key = EVMPrivateKey::from_hex(&hex_string);
         assert!(key.is_ok());
-    }
-
-    #[test]
-    fn test_zero_key_detection() {
-        let zero_bytes = [0u8; 32];
-        assert!(is_zero(&zero_bytes));
-
-        let non_zero_bytes = [1u8; 32];
-        assert!(!is_zero(&non_zero_bytes));
     }
 
     #[test]
