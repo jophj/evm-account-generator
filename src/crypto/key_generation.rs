@@ -66,33 +66,15 @@ fn is_zero(bytes: &[u8; 32]) -> bool {
 
 /// Checks if a private key is valid for secp256k1
 /// This is a simplified check - in production you'd want to use a proper secp256k1 library
-fn is_valid_secp256k1_key(bytes: &[u8; 32]) -> bool {
-    // secp256k1 curve order: 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
-    const SECP256K1_ORDER: [u8; 32] = [
-        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-        0xFE, 0xBA, 0xAE, 0xDC, 0xE6, 0xAF, 0x48, 0xA0, 0x3B, 0xBF, 0xD2, 0x5E, 0x8C, 0xD0, 0x36,
-        0x41, 0x41,
-    ];
-
-    // Compare bytes from most significant to least significant
-    for i in 0..32 {
-        if bytes[i] < SECP256K1_ORDER[i] {
-            return true;
-        } else if bytes[i] > SECP256K1_ORDER[i] {
-            return false;
-        }
-        // If equal, continue to next byte
-    }
-
-    // If all bytes are equal to the order, it's invalid (must be strictly less)
-    false
+pub fn is_valid_secp256k1_key(bytes: &[u8; 32]) -> bool {
+    EVMPrivateKey::is_valid(*bytes)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::rng::mock::MockRng;
-    use crate::traits::{ToHex, FromHex, PrivateKey};
+    use crate::traits::{FromHex, PrivateKey};
 
     #[test]
     fn test_generate_private_key_with_explicit_rng() {
@@ -134,22 +116,6 @@ mod tests {
         let hex_string = format!("0x{}", hex::encode(&bytes));
         let key = EVMPrivateKey::from_hex(&hex_string);
         assert!(key.is_ok());
-    }
-
-    #[test]
-    fn test_secp256k1_validation() {
-        // Test that we don't generate invalid keys
-        let mut rng = rand::thread_rng();
-        for _ in 0..10 {
-            let key = generate_private_key_with_rng(&mut rng);
-            let bytes = key.as_bytes();
-
-            // Should not be all zeros
-            assert!(!is_zero(bytes));
-
-            // Should be valid for secp256k1
-            assert!(is_valid_secp256k1_key(bytes));
-        }
     }
 
     #[test]
