@@ -9,11 +9,11 @@ use crate::traits::RandomBytes32;
 use crate::error::{EvmError, Result};
 
 /// A random number generator that reads from /dev/random
-pub struct DevRandomRng {
+pub struct DevRandomRngLegacy {
     file: File,
 }
 
-impl DevRandomRng {
+impl DevRandomRngLegacy {
     /// Creates a new DevRandomRng instance
     /// 
     /// # Returns
@@ -23,18 +23,18 @@ impl DevRandomRng {
     /// # Example
     /// 
     /// ```
-    /// use evm_account_generator::DevRandomRng;
+    /// use evm_account_generator::DevRandomRngLegacy;
     /// 
-    /// let rng = DevRandomRng::new().expect("Failed to open /dev/random");
+    /// let rng = DevRandomRngLegacy::new().expect("Failed to open /dev/random");
     /// ```
     pub fn new() -> Result<Self> {
         let file = File::open("/dev/random")
             .map_err(|e| EvmError::RngInitFailed(format!("Failed to open /dev/random: {}", e)))?;
-        Ok(DevRandomRng { file })
+        Ok(DevRandomRngLegacy { file })
     }
 }
 
-impl RandomBytes32 for DevRandomRng {
+impl RandomBytes32 for DevRandomRngLegacy {
     fn random_bytes_32(&mut self) -> [u8; 32] {
         let mut bytes = [0u8; 32];
         
@@ -54,7 +54,7 @@ mod tests {
     #[test]
     fn test_dev_random_rng_creation() {
         // Test that we can create a DevRandomRng instance
-        let result = DevRandomRng::new();
+        let result = DevRandomRngLegacy::new();
         
         // On systems without /dev/random, this might fail
         // We'll handle both cases gracefully
@@ -74,7 +74,7 @@ mod tests {
     #[cfg(unix)] // Only run on Unix-like systems
     fn test_dev_random_rng_generates_bytes() {
         // Only test on Unix systems where /dev/random should exist
-        if let Ok(mut rng) = DevRandomRng::new() {
+        if let Ok(mut rng) = DevRandomRngLegacy::new() {
             let bytes1 = rng.random_bytes_32();
             let bytes2 = rng.random_bytes_32();
             
@@ -94,7 +94,7 @@ mod tests {
         use crate::crypto::generate_private_key_with_rng;
         use crate::traits::{ToHex, PrivateKey};
         
-        if let Ok(mut rng) = DevRandomRng::new() {
+        if let Ok(mut rng) = DevRandomRngLegacy::new() {
             let key = generate_private_key_with_rng(&mut rng);
             let hex = key.to_hex();
             

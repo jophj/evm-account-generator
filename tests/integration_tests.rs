@@ -104,9 +104,9 @@ fn test_deterministic_generation() {
 #[cfg(unix)]
 #[test]
 fn test_dev_random_integration() {
-    use evm_account_generator::DevRandomRng;
+    use evm_account_generator::DevRandomRngLegacy;
     
-    if let Ok(mut rng) = DevRandomRng::new() {
+    if let Ok(mut rng) = DevRandomRngLegacy::new() {
         let key = generate_private_key_with_rng(&mut rng);
         assert!(is_valid_private_key(&key.to_hex()));
         

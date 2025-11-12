@@ -1,6 +1,6 @@
 //! DevRandomRng usage example (Unix systems only)
 
-use evm_account_generator::{DevRandomRng, generate_private_key_with_rng, PrivateKey2};
+use evm_account_generator::{DevRandomRngLegacy, generate_private_key_with_rng, PrivateKey2};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("EVM Account Generator - DevRandomRng Example");
@@ -10,7 +10,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         println!("Attempting to use /dev/random for key generation...");
         
-        match DevRandomRng::new() {
+        match DevRandomRngLegacy::new() {
             Ok(mut rng) => {
                 use evm_account_generator::traits::PrivateKey;
 

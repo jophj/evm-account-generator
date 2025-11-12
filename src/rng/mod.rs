@@ -4,11 +4,11 @@
 //! used in cryptographic key generation.
 
 pub mod trait_def;
-pub mod dev_random;
+pub mod dev_random_legacy;
 pub mod thread_rng;
 
 #[cfg(test)]
 pub mod mock;
 
 pub use trait_def::RandomBytes32;
-pub use dev_random::DevRandomRng;
+pub use dev_random_legacy::DevRandomRngLegacy;

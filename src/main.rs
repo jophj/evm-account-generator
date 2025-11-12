@@ -1,5 +1,5 @@
 use evm_account_generator::{
-    DevRandomRng, EVMPrivateKey, FromHex,
+    DevRandomRngLegacy, EVMPrivateKey, FromHex,
     generate_private_key_bytes, generate_private_key_with_rng, is_valid_private_key, traits::PrivateKey
 };
 use evm_account_generator::evm::evm_private_key::EVMPrivateKey2;
@@ -31,7 +31,7 @@ fn main() {
 
     // Demonstrate DevRandomRng (if available on this system)
     println!("\nDevRandomRng demonstration:");
-    match DevRandomRng::new() {
+    match DevRandomRngLegacy::new() {
         Ok(mut dev_rng) => {
             let private_key_dev = generate_private_key_with_rng(&mut dev_rng);
             println!("Generated with /dev/random: {}", private_key_dev.to_hex());
