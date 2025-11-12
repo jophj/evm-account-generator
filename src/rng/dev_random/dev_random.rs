@@ -1,3 +1,5 @@
+use std::{fs::File, io::Read};
+
 use rand::RngCore;
 
 use crate::FillBytes;
@@ -16,9 +18,9 @@ use crate::FillBytes;
 /// let mut generator = RngPrivateKeyGenerator::new(ThreadRngFillBytes::new());
 /// let key: EVMPrivateKey2 = generator.generate();
 /// ```
-pub struct ThreadRngFillBytes(rand::rngs::ThreadRng);
+pub struct DevRandomRng(File);
 
-impl ThreadRngFillBytes {
+impl DevRandomRng {
     /// Creates a new `ThreadRngFillBytes` using `rand::thread_rng()`
     ///
     /// # Examples
@@ -29,13 +31,19 @@ impl ThreadRngFillBytes {
     /// let rng = ThreadRngFillBytes::new();
     /// ```
     pub fn new() -> Self {
-        Self(rand::thread_rng())
+        let file = File::open("/dev/random");
+        if file.is_err() {
+            panic!("Failed to open /dev/random");
+        }
+
+        Self(file.unwrap())
     }
 }
 
-impl FillBytes for ThreadRngFillBytes {
+impl FillBytes for DevRandomRng {
     fn fill_bytes(&mut self, dest: &mut [u8]) {
-        RngCore::fill_bytes(&mut self.0, dest);
+        self.0.read_exact(dest)
+            .expect("Failed to read from /dev/random");
     }
 }
 
@@ -45,7 +53,7 @@ mod tests {
 
     #[test]
     fn test_thread_rng_fill_bytes() {
-        let mut rng = ThreadRngFillBytes::new();
+        let mut rng = DevRandomRng::new();
         let mut dest = [0u8; 32];
         rng.fill_bytes(&mut dest);
         assert_ne!(dest, [0u8; 32]);
