@@ -4,18 +4,18 @@
 //! private keys for different blockchain networks (EVM and Solana).
 
 use evm_account_generator::{
-    PrivateKeyGenerator, RngPrivateKeyGenerator, PrivateKey2,
+    PrivateKey2, PrivateKeyGenerator, RngPrivateKeyGenerator, FillBytes, ThreadRngFillBytes,
     evm::evm_private_key::EVMPrivateKey2,
     solana::solana_private_key::SolanaPrivateKey2,
 };
-use rand::thread_rng;
 
 fn main() {
-    // Create a single RNG-based generator
-    let mut generator = RngPrivateKeyGenerator::new(thread_rng());
-    
+    // Create a single RNG-based generator using ThreadRngFillBytes
+    // ThreadRngFillBytes wraps thread_rng() without polluting all RNG types
+    let mut generator = RngPrivateKeyGenerator::new(ThreadRngFillBytes::new());
+
     println!("=== Generic Private Key Generator Demo ===\n");
-    
+
     // Generate EVM private keys
     println!("--- EVM (Ethereum) Keys ---");
     for i in 1..=3 {
@@ -43,7 +43,7 @@ fn main() {
 }
 
 /// Generic function that works with any PrivateKey2 implementation
-fn demonstrate_generic_function<R: rand::RngCore>(
+fn demonstrate_generic_function<R: FillBytes>(
     generator: &mut RngPrivateKeyGenerator<R>
 ) {
     println!("--- Generic Function Demo ---");
