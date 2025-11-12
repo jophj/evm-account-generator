@@ -68,7 +68,6 @@
 //! ```
 
 use crate::PrivateKey2;
-use rand::RngCore;
 
 /// Generic trait for generating private keys of a specific type
 ///
@@ -150,6 +149,7 @@ where
     T: PrivateKey2,
     R: FillBytes,
 {
+    // TODO does it need to be mutable?
     fn generate(&mut self) -> T {
         let key_size = T::key_size();
         

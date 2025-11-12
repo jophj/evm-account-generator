@@ -1,7 +1,5 @@
 use std::{fs::File, io::Read};
 
-use rand::RngCore;
-
 use crate::FillBytes;
 
 /// A wrapper around `rand::rngs::ThreadRng` that implements `FillBytes`

@@ -64,6 +64,8 @@ impl PrivateKey2 for EVMPrivateKey2 {
         format!("0x{}", hex::encode(&self.0))
     }
 
+    // TODO: add EIP-55 checksumming
+    // TODO memoize the address derivation
     fn derive_address(&self) -> Self::Address {
         let secp = Secp256k1::new();
         let secret_key =
