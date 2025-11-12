@@ -1,11 +1,37 @@
+//! Solana blockchain private key implementation
+//!
+//! This module implements a simplified Solana private key type using Ed25519 keypairs.
+//!
+//! # Important Note
+//!
+//! This is a simplified implementation for demonstration purposes. Production Solana
+//! applications should use the official `solana-sdk` crate which provides proper
+//! Ed25519 key derivation, base58 encoding, and all Solana-specific functionality.
+
 use crate::private_key::PrivateKey2;
 
 /// Solana-specific private key implementation
-/// Solana uses Ed25519 keypairs which are 64 bytes (32-byte seed + 32-byte derived key)
+///
+/// Represents a 64-byte Ed25519 keypair used in the Solana blockchain.
+/// In real Solana, this consists of a 32-byte seed and a 32-byte derived key.
+///
+/// # Validation Rules
+///
+/// A valid Solana private key must:
+/// - Be exactly 64 bytes
+/// - Not be all zeros
+///
+/// # Note
+///
+/// This is a simplified implementation. Real Solana keypairs have more complex
+/// structure and validation requirements.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SolanaPrivateKey2([u8; 64]);
 
-/// Solana address type (simplified - real Solana uses base58 encoding)
+/// Solana address type
+///
+/// In real Solana, addresses are Ed25519 public keys encoded in base58.
+/// This is a simplified representation for demonstration purposes.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SolanaAddress(String);
 
@@ -17,8 +43,25 @@ impl std::fmt::Display for SolanaAddress {
 
 impl SolanaPrivateKey2 {
     /// Validates if the byte slice is a valid Solana private key
-    /// For Solana Ed25519, any non-zero 64-byte array is valid
+    ///
+    /// For this simplified implementation, a valid key must:
+    /// 1. Be exactly 64 bytes
+    /// 2. Not be all zeros
+    ///
+    /// # Arguments
+    ///
+    /// * `bytes` - The byte slice to validate
+    ///
+    /// # Returns
+    ///
+    /// `true` if the bytes could represent a valid Solana private key, `false` otherwise
+    ///
+    /// # Note
+    ///
+    /// Real Solana Ed25519 keys have additional validation requirements that are
+    /// not implemented in this simplified version.
     pub fn is_valid(bytes: &[u8]) -> bool {
+        // Check length
         if bytes.len() != 64 {
             return false;
         }
@@ -48,9 +91,28 @@ impl PrivateKey2 for SolanaPrivateKey2 {
         format!("0x{}", hex::encode(&self.0))
     }
 
+    /// Derives a Solana address from this private key
+    ///
+    /// This is a simplified implementation that creates a hex-based address.
+    ///
+    /// # Real Solana Address Derivation
+    ///
+    /// In real Solana:
+    /// 1. The first 32 bytes are the Ed25519 seed
+    /// 2. The public key is derived from the seed using Ed25519
+    /// 3. The public key (32 bytes) is base58-encoded as the address
+    ///
+    /// # Returns
+    ///
+    /// A simplified address string starting with "Sol"
+    ///
+    /// # Note
+    ///
+    /// This is NOT a real Solana address format. Use `solana-sdk` for production.
     fn derive_address(&self) -> Self::Address {
-        // Simplified address derivation - real Solana would derive Ed25519 public key
-        // from the seed (first 32 bytes) and use base58 encoding
+        // Simplified address derivation - real Solana would:
+        // 1. Derive Ed25519 public key from the seed (first 32 bytes)
+        // 2. Encode the public key in base58
         let hash = format!("Sol{}", hex::encode(&self.0[..16]));
         SolanaAddress(hash)
     }

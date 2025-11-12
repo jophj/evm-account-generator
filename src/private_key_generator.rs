@@ -149,7 +149,23 @@ where
     T: PrivateKey2,
     R: FillBytes,
 {
-    // TODO does it need to be mutable?
+    /// Generates a new private key of type T
+    ///
+    /// This method:
+    /// 1. Queries the key size from T::key_size()
+    /// 2. Generates random bytes of the appropriate size
+    /// 3. Validates the bytes using T::is_valid()
+    /// 4. If invalid, generates new bytes and retries (loop until valid)
+    /// 5. Returns the validated key
+    ///
+    /// # Returns
+    ///
+    /// A newly generated and validated private key
+    ///
+    /// # Notes
+    ///
+    /// The generator takes `&mut self` because the RNG needs to update its internal state.
+    /// For most RNGs, this is necessary to produce different random values on each call.
     fn generate(&mut self) -> T {
         let key_size = T::key_size();
         
@@ -157,11 +173,15 @@ where
             // Generate the appropriate number of bytes for this key type
             let mut bytes = vec![0u8; key_size];
             
+            // Fill with random bytes from the RNG
             self.rng.fill_bytes(&mut bytes);
 
+            // Validate and return if valid, otherwise retry
             if T::is_valid(&bytes) {
+                // We know it's valid because we just checked, so unwrap is safe
                 return T::new(&bytes).unwrap();
             }
+            // If invalid, loop continues and generates new random bytes
         }
     }
 }

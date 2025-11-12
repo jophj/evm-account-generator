@@ -1,45 +1,84 @@
-use evm_account_generator::{DevRandomRng, PrivateKeyGenerator, RngPrivateKeyGenerator, ThreadRngFillBytes};
-use evm_account_generator::evm::evm_private_key::EVMPrivateKey2;
-use evm_account_generator::private_key::PrivateKey2;
+//! Comprehensive example demonstrating all features of the EVM account generator
+//!
+//! This example showcases:
+//! - Creating keys from raw bytes
+//! - Generating keys with ThreadRng
+//! - Generating keys with DevRandomRng (Unix-only)
+//! - Parsing keys from hex strings
+//! - Error handling for invalid keys
+//! - Address derivation
+
+use evm_account_generator::{
+    DevRandomRng, PrivateKeyGenerator, RngPrivateKeyGenerator, ThreadRngFillBytes,
+    PrivateKey2, evm::evm_private_key::EVMPrivateKey2,
+};
 
 fn main() {
-    println!("EVM Account Generator");
-    println!("====================");
+    println!("EVM Account Generator - Comprehensive Example");
+    println!("==============================================\n");
 
+    // === 1. Creating a key from raw bytes ===
+    println!("1. Creating key from raw bytes:");
     let private_key = EVMPrivateKey2::new(&[0x12u8; 32]).expect("Valid key");
-    println!("Generated private key: {}", private_key.to_string());
-    println!("Address: {}", private_key.derive_address());
+    println!("   Private Key: {}", private_key.to_string());
+    println!("   Address:     {}", private_key.derive_address());
+    println!();
 
-    // Generate a private key using explicit RNG
+    // === 2. Generating a key using ThreadRng ===
+    println!("2. Generating key with ThreadRng (cryptographically secure):");
     let mut thread_rng_generator = RngPrivateKeyGenerator::new(ThreadRngFillBytes::new());
     let private_key: EVMPrivateKey2 = thread_rng_generator.generate();
-    println!("Generated private key: {}", private_key.to_string());
-    println!("Address: {}", private_key.derive_address());
+    println!("   Private Key: {}", private_key.to_string());
+    println!("   Address:     {}", private_key.derive_address());
+    println!();
 
-
-    // Demonstrate DevRandomRng (if available on this system)
-    println!("\nDevRandomRng demonstration:");
+    // === 3. Generating a key using DevRandomRng (Unix-only) ===
+    println!("3. Generating key with DevRandomRng (system entropy):");
+    println!("   Note: This may block until sufficient entropy is available");
     let dev_random_rng = DevRandomRng::new();
     let mut dev_random_generator = RngPrivateKeyGenerator::new(dev_random_rng);
     let private_key_dev: EVMPrivateKey2 = dev_random_generator.generate();
-    println!("Generated with /dev/random: {}", private_key_dev.to_string());
+    println!("   Private Key: {}", private_key_dev.to_string());
+    println!("   Address:     {}", private_key_dev.derive_address());
+    println!();
     
-    // Test validation with some examples
-    println!("\nValidation tests:");
-    let valid_key = EVMPrivateKey2::from_string("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef");
-    println!("Valid key: {}", valid_key.unwrap().to_string());
-    // println!("Invalid key (too short): {}", is_valid_private_key("0x123"));
-    // println!("Invalid key (bad hex): {}", is_valid_private_key("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdefg"));
+    // === 4. Parsing keys from hex strings ===
+    println!("4. Parsing key from hex string:");
+    let hex_str = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+    match EVMPrivateKey2::from_string(hex_str) {
+        Some(key) => {
+            println!("   ✓ Successfully parsed key");
+            println!("   Private Key: {}", key.to_string());
+            println!("   Address:     {}", key.derive_address());
+        }
+        None => println!("   ✗ Failed to parse key"),
+    }
+    println!();
     
-    // Demonstrate error handling
-    println!("\nError handling tests:");
+    // === 5. Error handling demonstrations ===
+    println!("5. Error handling examples:");
+    
+    // Test with too-short hex string
+    print!("   Testing short key (0x123): ");
     match EVMPrivateKey2::from_string("0x123") {
-        Some(key) => println!("Unexpected success: {}", key.to_string()),
-        None => println!("Expected error for short key"),
+        Some(key) => println!("✗ Unexpected success: {}", key.to_string()),
+        None => println!("✓ Correctly rejected (invalid length)"),
     }
     
+    // Test with invalid hex characters
+    print!("   Testing invalid hex (with 'g'): ");
     match EVMPrivateKey2::from_string("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdefg") {
-        Some(key) => println!("Unexpected success: {}", key.to_string()),
-        None => println!("Expected error for invalid hex"),
+        Some(key) => println!("✗ Unexpected success: {}", key.to_string()),
+        None => println!("✓ Correctly rejected (invalid hex)"),
     }
+    
+    // Test with all zeros (invalid for secp256k1)
+    print!("   Testing all zeros: ");
+    let zeros = [0u8; 32];
+    match EVMPrivateKey2::new(&zeros) {
+        Some(key) => println!("✗ Unexpected success: {}", key.to_string()),
+        None => println!("✓ Correctly rejected (all zeros invalid)"),
+    }
+    
+    println!("\n✓ Comprehensive example completed successfully!");
 }
