@@ -3,26 +3,6 @@
 use crate::crypto::EVMPrivateKey;
 use crate::traits::{FromBytes, PrivateKey, RandomBytes32};
 
-/// Generates a cryptographically secure EVM private key using a provided RNG
-///
-/// # Arguments
-///
-/// * `rng` - A mutable reference to any type implementing RandomBytes32
-///
-/// # Returns
-///
-/// A PrivateKey instance with randomly generated data
-///
-/// # Example
-///
-/// ```
-/// use evm_account_generator::{generate_private_key_with_rng, PrivateKey};
-/// use rand::thread_rng;
-///
-/// let mut rng = thread_rng();
-/// let private_key = generate_private_key_with_rng(&mut rng);
-/// println!("Generated private key: {}", private_key.to_hex());
-/// ```
 pub fn generate_private_key_with_rng<R: RandomBytes32>(rng: &mut R) -> EVMPrivateKey {
     loop {
         // Generate random bytes

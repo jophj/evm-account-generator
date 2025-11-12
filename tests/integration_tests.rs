@@ -1,8 +1,7 @@
 //! Integration tests for EVM account generator
 
 use evm_account_generator::{
-    generate_private_key_with_rng, generate_private_key_bytes, is_valid_private_key,
-    EVMPrivateKey, ToHex, GetAddress, RandomBytes32, FromHex, PrivateKey
+    EVMPrivateKey, FromHex, GetAddress, PrivateKey2, RandomBytes32, ToHex, generate_private_key_bytes, generate_private_key_with_rng, is_valid_private_key, traits::PrivateKey
 };
 use rand::thread_rng;
 

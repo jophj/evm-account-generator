@@ -1,6 +1,6 @@
 //! DevRandomRng usage example (Unix systems only)
 
-use evm_account_generator::{DevRandomRng, generate_private_key_with_rng, PrivateKey};
+use evm_account_generator::{DevRandomRng, generate_private_key_with_rng, PrivateKey2};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("EVM Account Generator - DevRandomRng Example");
@@ -12,6 +12,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         
         match DevRandomRng::new() {
             Ok(mut rng) => {
+                use evm_account_generator::traits::PrivateKey;
+
                 println!("Successfully opened /dev/random");
                 println!("Note: This may block until sufficient entropy is available");
                 

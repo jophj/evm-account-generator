@@ -1,12 +1,18 @@
 use evm_account_generator::{
-    DevRandomRng, EVMPrivateKey, FromHex, PrivateKey,
-    generate_private_key_bytes, generate_private_key_with_rng, is_valid_private_key
+    DevRandomRng, EVMPrivateKey, FromHex,
+    generate_private_key_bytes, generate_private_key_with_rng, is_valid_private_key, traits::PrivateKey
 };
+use evm_account_generator::evm::evm_private_key::EVMPrivateKey2;
+use evm_account_generator::private_key::PrivateKey2;
 
 fn main() {
     println!("EVM Account Generator");
     println!("====================");
-    
+
+    let private_key = EVMPrivateKey2::new(&[0x12u8; 32]).expect("Valid key");
+    println!("Generated private key: {}", private_key.to_string());
+    println!("Address: {}", private_key.derive_address());
+
     // Generate a private key using explicit RNG
     let mut rng = rand::thread_rng();
     let private_key = generate_private_key_with_rng(&mut rng);

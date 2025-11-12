@@ -3,6 +3,7 @@
 pub mod private_key;
 pub mod key_generation;
 pub mod validation;
+pub mod test;
 
 pub use private_key::EVMPrivateKey;
 pub use key_generation::{generate_private_key_with_rng, generate_private_key_bytes};

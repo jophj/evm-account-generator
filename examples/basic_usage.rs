@@ -1,6 +1,6 @@
 //! Basic usage example for EVM account generator
 
-use evm_account_generator::{generate_private_key_with_rng, PrivateKey};
+use evm_account_generator::{PrivateKey2, generate_private_key_with_rng, traits::PrivateKey};
 use rand::thread_rng;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
