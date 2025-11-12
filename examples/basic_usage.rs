@@ -1,18 +1,29 @@
 //! Basic usage example for EVM account generator
+//!
+//! This example demonstrates the simplest way to generate an EVM private key
+//! using the default thread-based random number generator.
 
-use evm_account_generator::{PrivateKey2, generate_private_key_with_rng, traits::PrivateKey};
-use rand::thread_rng;
+use evm_account_generator::{
+    RngPrivateKeyGenerator,
+    PrivateKeyGenerator,
+    ThreadRngFillBytes,
+    PrivateKey2,
+    evm::evm_private_key::EVMPrivateKey2,
+};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() {
     println!("EVM Account Generator - Basic Usage Example");
-    println!("==========================================");
+    println!("==========================================\n");
 
-    // Generate a private key using thread RNG
-    let mut rng = thread_rng();
-    let private_key = generate_private_key_with_rng(&mut rng);
+    // Create a generator using the thread RNG
+    let mut generator = RngPrivateKeyGenerator::new(ThreadRngFillBytes::new());
     
-    println!("Generated private key: {}", private_key.to_hex());
-    println!("Corresponding address: {}", private_key.get_address());
+    // Generate a private key
+    let private_key: EVMPrivateKey2 = generator.generate();
     
-    Ok(())
+    // Display the results
+    println!("Generated private key: {}", private_key.to_string());
+    println!("Corresponding address: {}", private_key.derive_address());
+    
+    println!("\n✓ Successfully generated EVM account!");
 }

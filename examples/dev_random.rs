@@ -1,40 +1,48 @@
-//! DevRandomRng usage example (Unix systems only)
+//! DevRandomRng usage example
+//! 
+//! This example demonstrates generating EVM private keys using /dev/random
+//! for cryptographically secure entropy from the operating system.
+//! 
+//! Note: On Unix systems, /dev/random may block until sufficient entropy is available.
 
-use evm_account_generator::{DevRandomRngLegacy, generate_private_key_with_rng, PrivateKey2};
+use evm_account_generator::{
+    DevRandomRng, 
+    RngPrivateKeyGenerator, 
+    PrivateKeyGenerator,
+    PrivateKey2,
+    evm::evm_private_key::EVMPrivateKey2,
+};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() {
     println!("EVM Account Generator - DevRandomRng Example");
-    println!("============================================");
+    println!("============================================\n");
     
-    #[cfg(unix)]
-    {
-        println!("Attempting to use /dev/random for key generation...");
-        
-        match DevRandomRngLegacy::new() {
-            Ok(mut rng) => {
-                use evm_account_generator::traits::PrivateKey;
-
-                println!("Successfully opened /dev/random");
-                println!("Note: This may block until sufficient entropy is available");
-                
-                let private_key = generate_private_key_with_rng(&mut rng);
-                
-                println!("Generated private key: {}", private_key.to_hex());
-                println!("Corresponding address: {}", private_key.get_address());
-                println!("Key generated using system entropy from /dev/random");
-            }
-            Err(e) => {
-                println!("Failed to open /dev/random: {}", e);
-                println!("This is expected on some systems or in sandboxed environments");
-            }
-        }
+    println!("Attempting to use /dev/random for key generation...");
+    println!("Note: This may block until sufficient entropy is available\n");
+    
+    // Create a DevRandomRng instance
+    let rng = DevRandomRng::new();
+    
+    // Create a generator with DevRandomRng
+    let mut generator = RngPrivateKeyGenerator::new(rng);
+    
+    // Generate an EVM private key
+    let private_key: EVMPrivateKey2 = generator.generate();
+    
+    // Display the results
+    println!("✓ Successfully generated EVM private key");
+    println!("  Private Key: {}", private_key.to_string());
+    println!("  Address:     {}", private_key.derive_address());
+    println!("\nKey generated using system entropy from /dev/random");
+    
+    // Generate a few more keys to demonstrate
+    println!("\nGenerating 3 additional keys...\n");
+    for i in 1..=3 {
+        let key: EVMPrivateKey2 = generator.generate();
+        println!("Key {}: {}", i, key.to_string());
+        println!("Address {}: {}", i, key.derive_address());
+        println!();
     }
     
-    #[cfg(not(unix))]
-    {
-        println!("DevRandomRng is only available on Unix-like systems");
-        println!("This example cannot run on the current platform");
-    }
-    
-    Ok(())
+    println!("All keys generated successfully using /dev/random entropy!");
 }
