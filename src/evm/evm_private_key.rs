@@ -4,13 +4,16 @@ use secp256k1::{PublicKey, Secp256k1, SecretKey};
 
 /// EVM-specific private key implementation
 #[derive(Debug, Clone, PartialEq)]
-pub struct EVMPrivateKey2 {
-    bytes: [u8; 32],
-}
+pub struct EVMPrivateKey2([u8; 32]);
 
 /// EVM address type
 #[derive(Debug, Clone, PartialEq)]
 pub struct EVMAddress([u8; 20]);
+
+pub const SECP256K1_ORDER: [u8; 32] = [
+    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFE,
+    0xBA, 0xAE, 0xDC, 0xE6, 0xAF, 0x48, 0xA0, 0x3B, 0xBF, 0xD2, 0x5E, 0x8C, 0xD0, 0x36, 0x41, 0x41,
+];
 
 impl std::fmt::Display for EVMAddress {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -27,21 +30,21 @@ impl PrivateKey2 for EVMPrivateKey2 {
         }
         let mut key_bytes = [0u8; 32];
         key_bytes.copy_from_slice(bytes);
-        Some(Self { bytes: key_bytes })
+        Some(Self(key_bytes))
     }
 
     fn as_bytes(&self) -> &[u8] {
-        &self.bytes
+        &self.0
     }
 
     fn to_string(&self) -> String {
-        format!("0x{}", hex::encode(&self.bytes))
+        format!("0x{}", hex::encode(&self.0))
     }
 
     fn derive_address(&self) -> Self::Address {
         let secp = Secp256k1::new();
-        let secret_key = SecretKey::from_slice(&self.bytes)
-            .expect("Private key should be valid for secp256k1");
+        let secret_key =
+            SecretKey::from_slice(&self.0).expect("Private key should be valid for secp256k1");
 
         let public_key = PublicKey::from_secret_key(&secp, &secret_key);
         let public_key_bytes = public_key.serialize_uncompressed();
@@ -65,12 +68,6 @@ impl PrivateKey2 for EVMPrivateKey2 {
             return false;
         }
 
-        const SECP256K1_ORDER: [u8; 32] = [
-            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-            0xFF, 0xFE, 0xBA, 0xAE, 0xDC, 0xE6, 0xAF, 0x48, 0xA0, 0x3B, 0xBF, 0xD2, 0x5E, 0x8C,
-            0xD0, 0x36, 0x41, 0x41,
-        ];
-
         for i in 0..32 {
             if bytes[i] < SECP256K1_ORDER[i] {
                 return true;
@@ -85,7 +82,7 @@ impl PrivateKey2 for EVMPrivateKey2 {
     fn key_size() -> usize {
         32
     }
-    
+
     fn from_string(string: &str) -> Option<Self> {
         let clean_hex = string.strip_prefix("0x").unwrap_or(string);
 
