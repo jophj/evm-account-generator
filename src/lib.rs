@@ -17,8 +17,10 @@ pub mod crypto;
 pub mod rng;
 pub mod traits;
 pub mod private_key;
+pub mod private_key_generator;
 pub mod error;
 pub mod evm;
+pub mod solana;
 
 // Re-export the main types and functions for easier access
 pub use crypto::{
@@ -29,6 +31,7 @@ pub use crypto::{
 };
 
 pub use private_key::PrivateKey2;
+pub use private_key_generator::{PrivateKeyGenerator, RngPrivateKeyGenerator};
 
 pub use rng::DevRandomRng;
 pub use traits::{ToHex, GetAddress, FromHex, FromBytes, RandomBytes32};

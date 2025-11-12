@@ -24,6 +24,12 @@ pub trait PrivateKey2: Sized + Clone {
     /// Result containing the private key or an error if invalid
     fn from_string(string: &str) -> Option<Self>;
 
+    /// Validates if the byte slice is a valid private key for this blockchain
+    fn is_valid(bytes: &[u8]) -> bool;
+
+    /// Returns the expected size in bytes for this key type
+    fn key_size() -> usize;
+
     /// Returns the private key as a byte slice reference
     fn as_bytes(&self) -> &[u8];
 
@@ -32,10 +38,4 @@ pub trait PrivateKey2: Sized + Clone {
 
     /// Derives the address from this private key
     fn derive_address(&self) -> Self::Address;
-
-    /// Validates if the byte slice is a valid private key for this blockchain
-    fn is_valid(bytes: &[u8]) -> bool;
-
-    /// Returns the expected size in bytes for this key type
-    fn key_size() -> usize;
 }
