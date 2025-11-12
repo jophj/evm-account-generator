@@ -21,6 +21,29 @@ impl std::fmt::Display for EVMAddress {
     }
 }
 
+impl EVMPrivateKey2 {
+    /// Validates if the byte slice is a valid EVM private key
+    pub fn is_valid(bytes: &[u8]) -> bool {
+        if bytes.len() != 32 {
+            return false;
+        }
+
+        if bytes.iter().all(|&b| b == 0) {
+            return false;
+        }
+
+        for i in 0..32 {
+            if bytes[i] < SECP256K1_ORDER[i] {
+                return true;
+            } else if bytes[i] > SECP256K1_ORDER[i] {
+                return false;
+            }
+        }
+
+        false
+    }
+}
+
 impl PrivateKey2 for EVMPrivateKey2 {
     type Address = EVMAddress;
 
@@ -60,23 +83,7 @@ impl PrivateKey2 for EVMPrivateKey2 {
     }
 
     fn is_valid(bytes: &[u8]) -> bool {
-        if bytes.len() != 32 {
-            return false;
-        }
-
-        if bytes.iter().all(|&b| b == 0) {
-            return false;
-        }
-
-        for i in 0..32 {
-            if bytes[i] < SECP256K1_ORDER[i] {
-                return true;
-            } else if bytes[i] > SECP256K1_ORDER[i] {
-                return false;
-            }
-        }
-
-        false
+        EVMPrivateKey2::is_valid(bytes)
     }
 
     fn key_size() -> usize {
