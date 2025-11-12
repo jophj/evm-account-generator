@@ -66,12 +66,10 @@
 //! - [`evm`] - Ethereum Virtual Machine key support
 //! - [`solana`] - Solana blockchain key support
 //! - [`rng`] - Random number generation implementations
-//! - [`error`] - Error types and result definitions
 
 pub mod rng;
 pub mod private_key;
 pub mod private_key_generator;
-pub mod error;
 pub mod evm;
 pub mod solana;
 
@@ -80,4 +78,3 @@ pub use private_key_generator::{PrivateKeyGenerator, RngPrivateKeyGenerator, Fil
 pub use rng::thread_rng::ThreadRngFillBytes;
 
 pub use rng::DevRandomRng;
-pub use error::{EvmError, Result};
