@@ -31,8 +31,8 @@ pub use crypto::{
 };
 
 pub use private_key::PrivateKey2;
-pub use private_key_generator::{PrivateKeyGenerator, RngPrivateKeyGenerator, FillBytes, ThreadRngFillBytes};
-
+pub use private_key_generator::{PrivateKeyGenerator, RngPrivateKeyGenerator, FillBytes};
+pub use rng::thread_rng::thread_rng::ThreadRngFillBytes;
 pub use rng::DevRandomRng;
 pub use traits::{ToHex, GetAddress, FromHex, FromBytes, RandomBytes32};
 pub use error::{EvmError, Result};

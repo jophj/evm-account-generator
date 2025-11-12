@@ -97,49 +97,6 @@ pub trait FillBytes {
     fn fill_bytes(&mut self, dest: &mut [u8]);
 }
 
-/// A wrapper around `rand::rngs::ThreadRng` that implements `FillBytes`
-///
-/// This provides a clean way to use `thread_rng()` with the `PrivateKeyGenerator`
-/// without polluting all `RngCore` types with the `FillBytes` trait.
-///
-/// # Examples
-///
-/// ```
-/// use evm_account_generator::{RngPrivateKeyGenerator, PrivateKeyGenerator, ThreadRngFillBytes};
-/// use evm_account_generator::evm::evm_private_key::EVMPrivateKey2;
-///
-/// let mut generator = RngPrivateKeyGenerator::new(ThreadRngFillBytes::new());
-/// let key: EVMPrivateKey2 = generator.generate();
-/// ```
-pub struct ThreadRngFillBytes(rand::rngs::ThreadRng);
-
-impl ThreadRngFillBytes {
-    /// Creates a new `ThreadRngFillBytes` using `rand::thread_rng()`
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use evm_account_generator::ThreadRngFillBytes;
-    ///
-    /// let rng = ThreadRngFillBytes::new();
-    /// ```
-    pub fn new() -> Self {
-        Self(rand::thread_rng())
-    }
-}
-
-impl Default for ThreadRngFillBytes {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl FillBytes for ThreadRngFillBytes {
-    fn fill_bytes(&mut self, dest: &mut [u8]) {
-        RngCore::fill_bytes(&mut self.0, dest);
-    }
-}
-
 
 /// A concrete implementation of PrivateKeyGenerator that uses an RNG
 /// to generate random private keys for any blockchain type
@@ -212,7 +169,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::evm::evm_private_key::EVMPrivateKey2;
+    use crate::{evm::evm_private_key::EVMPrivateKey2, ThreadRngFillBytes};
 
     /// Mock RNG for testing that returns predetermined bytes
     struct MockRng {

@@ -5,6 +5,7 @@
 
 pub mod trait_def;
 pub mod dev_random;
+pub mod thread_rng;
 
 #[cfg(test)]
 pub mod mock;
