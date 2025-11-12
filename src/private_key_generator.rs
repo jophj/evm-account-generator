@@ -22,12 +22,12 @@
 //!
 //! ```
 //! use evm_account_generator::{
-//!     RngPrivateKeyGenerator, PrivateKeyGenerator, ThreadRngFillBytes, PrivateKey2,
-//!     evm::evm_private_key::EVMPrivateKey2,
+//!     RngPrivateKeyGenerator, PrivateKeyGenerator, ThreadRngFillBytes, PrivateKey,
+//!     evm::PrivateKey as EvmKey,
 //! };
 //!
 //! let mut generator = RngPrivateKeyGenerator::new(ThreadRngFillBytes::new());
-//! let evm_key: EVMPrivateKey2 = generator.generate();
+//! let evm_key: EvmKey = generator.generate();
 //! println!("EVM Key (32 bytes): {}", evm_key.to_string());
 //! ```
 //!
@@ -35,17 +35,17 @@
 //!
 //! ```
 //! use evm_account_generator::{
-//!     RngPrivateKeyGenerator, PrivateKeyGenerator, ThreadRngFillBytes, PrivateKey2,
-//!     evm::evm_private_key::EVMPrivateKey2,
-//!     solana::solana_private_key::SolanaPrivateKey2,
+//!     RngPrivateKeyGenerator, PrivateKeyGenerator, ThreadRngFillBytes, PrivateKey,
+//!     evm::PrivateKey as EvmKey,
+//!     solana::PrivateKey as SolanaKey,
 //! };
 //!
 //! // Create a single generator
 //! let mut generator = RngPrivateKeyGenerator::new(ThreadRngFillBytes::new());
 //!
 //! // Generate keys for different blockchains with different sizes
-//! let evm_key: EVMPrivateKey2 = generator.generate();      // 32 bytes
-//! let solana_key: SolanaPrivateKey2 = generator.generate(); // 64 bytes
+//! let evm_key: EvmKey = generator.generate();         // 32 bytes
+//! let solana_key: SolanaKey = generator.generate();   // 64 bytes
 //!
 //! println!("EVM Key: {}", evm_key.to_string());
 //! println!("Solana Key: {}", solana_key.to_string());
@@ -55,26 +55,26 @@
 //!
 //! ```
 //! use evm_account_generator::{
-//!     RngPrivateKeyGenerator, PrivateKeyGenerator, PrivateKey2, FillBytes,
+//!     RngPrivateKeyGenerator, PrivateKeyGenerator, PrivateKey, FillBytes,
 //! };
 //!
 //! fn generate_batch<T, R>(generator: &mut RngPrivateKeyGenerator<R>, count: usize) -> Vec<T>
 //! where
-//!     T: PrivateKey2,
+//!     T: PrivateKey,
 //!     R: FillBytes,
 //! {
 //!     (0..count).map(|_| generator.generate()).collect()
 //! }
 //! ```
 
-use crate::PrivateKey2;
+use crate::PrivateKey;
 
 /// Generic trait for generating private keys of a specific type
 ///
 /// This trait allows for different implementations of key generation strategies.
-/// The type parameter `T` must implement `PrivateKey2`, ensuring type safety
+/// The type parameter `T` must implement `PrivateKey`, ensuring type safety
 /// across different blockchain networks.
-pub trait PrivateKeyGenerator<T: PrivateKey2> {
+pub trait PrivateKeyGenerator<T: PrivateKey> {
     /// Generates a new private key of type T
     ///
     /// # Returns
@@ -115,11 +115,11 @@ pub trait FillBytes {
 /// ```
 /// use evm_account_generator::{
 ///     RngPrivateKeyGenerator, PrivateKeyGenerator, ThreadRngFillBytes,
-///     evm::evm_private_key::EVMPrivateKey2,
+///     evm::PrivateKey as EvmKey,
 /// };
 ///
 /// let mut generator = RngPrivateKeyGenerator::new(ThreadRngFillBytes::new());
-/// let key: EVMPrivateKey2 = generator.generate();
+/// let key: EvmKey = generator.generate();
 /// ```
 pub struct RngPrivateKeyGenerator<R: FillBytes> {
     rng: R,
@@ -146,7 +146,7 @@ impl<R: FillBytes> RngPrivateKeyGenerator<R> {
 
 impl<T, R> PrivateKeyGenerator<T> for RngPrivateKeyGenerator<R>
 where
-    T: PrivateKey2,
+    T: PrivateKey,
     R: FillBytes,
 {
     /// Generates a new private key of type T
@@ -189,7 +189,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{evm::evm_private_key::EVMPrivateKey2, ThreadRngFillBytes};
+    use crate::{evm::PrivateKey as EvmKey, ThreadRngFillBytes};
 
     /// Mock RNG for testing that returns predetermined bytes
     struct MockRng {
@@ -222,7 +222,7 @@ mod tests {
         ]);
         
         let mut generator: RngPrivateKeyGenerator<MockRng> = RngPrivateKeyGenerator::new(mock_rng);
-        let private_key: EVMPrivateKey2 = generator.generate();
+        let private_key: EvmKey = generator.generate();
         
         // Should skip the all-zeros and generate the valid key
         assert_eq!(
@@ -241,9 +241,9 @@ mod tests {
         
         let mut generator = RngPrivateKeyGenerator::new(mock_rng);
         
-        let key1: EVMPrivateKey2 = generator.generate();
-        let key2: EVMPrivateKey2 = generator.generate();
-        let key3: EVMPrivateKey2 = generator.generate();
+        let key1: EvmKey = generator.generate();
+        let key2: EvmKey = generator.generate();
+        let key3: EvmKey = generator.generate();
         
         assert_eq!(
             key1.to_string(), 
@@ -261,7 +261,7 @@ mod tests {
 
     #[test]
     fn test_generate_solana_private_key() {
-        use crate::solana::solana_private_key::SolanaPrivateKey2;
+        use crate::solana::PrivateKey as SolanaKey;
         
         let mock_rng = MockRng::new(vec![
             vec![0u8; 64],  // Invalid: all zeros
@@ -269,7 +269,7 @@ mod tests {
         ]);
         
         let mut generator: RngPrivateKeyGenerator<MockRng> = RngPrivateKeyGenerator::new(mock_rng);
-        let private_key: SolanaPrivateKey2 = generator.generate();
+        let private_key: SolanaKey = generator.generate();
         
         // Should skip the all-zeros and generate the valid key (64 bytes = 128 hex chars)
         let expected = format!(
@@ -291,7 +291,7 @@ mod tests {
         ]);
         
         let mut generator = RngPrivateKeyGenerator::new(mock_rng);
-        let key: EVMPrivateKey2 = generator.generate();
+        let key: EvmKey = generator.generate();
         
         assert_eq!(
             key.to_string(),
@@ -301,7 +301,7 @@ mod tests {
 
     #[test]
     fn test_generator_with_different_sizes() {
-        use crate::solana::solana_private_key::SolanaPrivateKey2;
+        use crate::solana::PrivateKey as SolanaKey;
         
         // Test that the same generator can handle different key sizes
         let mock_rng = MockRng::new(vec![
@@ -312,17 +312,17 @@ mod tests {
         let mut generator = RngPrivateKeyGenerator::new(mock_rng);
         
         // Generate 32-byte EVM key
-        let evm_key: EVMPrivateKey2 = generator.generate();
+        let evm_key: EvmKey = generator.generate();
         assert_eq!(evm_key.as_bytes().len(), 32);
         
         // Generate 64-byte Solana key with same generator
-        let sol_key: SolanaPrivateKey2 = generator.generate();
+        let sol_key: SolanaKey = generator.generate();
         assert_eq!(sol_key.as_bytes().len(), 64);
     }
 
     #[test]
     fn test_generator_produces_valid_addresses() {
-        use crate::solana::solana_private_key::SolanaPrivateKey2;
+        use crate::solana::PrivateKey as SolanaKey;
         
         let mock_rng = MockRng::new(vec![
             vec![11u8; 32],  // EVM key
@@ -332,13 +332,13 @@ mod tests {
         let mut generator = RngPrivateKeyGenerator::new(mock_rng);
         
         // Test EVM address generation
-        let evm_key: EVMPrivateKey2 = generator.generate();
+        let evm_key: EvmKey = generator.generate();
         let evm_addr = evm_key.derive_address();
         assert!(evm_addr.to_string().starts_with("0x"));
         assert_eq!(evm_addr.to_string().len(), 42); // 0x + 40 hex chars
         
         // Test Solana address generation
-        let sol_key: SolanaPrivateKey2 = generator.generate();
+        let sol_key: SolanaKey = generator.generate();
         let sol_addr = sol_key.derive_address();
         assert!(sol_addr.to_string().starts_with("Sol"));
     }
@@ -346,10 +346,10 @@ mod tests {
     #[test]
     fn test_key_size_detection() {
         // Verify that key_size() returns correct values
-        assert_eq!(EVMPrivateKey2::key_size(), 32);
+        assert_eq!(EvmKey::key_size(), 32);
         
-        use crate::solana::solana_private_key::SolanaPrivateKey2;
-        assert_eq!(SolanaPrivateKey2::key_size(), 64);
+        use crate::solana::PrivateKey as SolanaKey;
+        assert_eq!(SolanaKey::key_size(), 64);
     }
 
     #[test]
@@ -380,9 +380,9 @@ mod tests {
         
         let mut generator = RngPrivateKeyGenerator::new(mock_rng);
         
-        let key1: EVMPrivateKey2 = generator.generate();
-        let key2: EVMPrivateKey2 = generator.generate();
-        let key3: EVMPrivateKey2 = generator.generate(); // Should cycle back to first
+        let key1: EvmKey = generator.generate();
+        let key2: EvmKey = generator.generate();
+        let key3: EvmKey = generator.generate(); // Should cycle back to first
         
         assert_eq!(
             key1.to_string(),
@@ -400,7 +400,7 @@ mod tests {
 
     #[test]
     fn test_multiple_solana_keys() {
-        use crate::solana::solana_private_key::SolanaPrivateKey2;
+        use crate::solana::PrivateKey as SolanaKey;
         
         let mock_rng = MockRng::new(vec![
             vec![0x11; 64],
@@ -410,9 +410,9 @@ mod tests {
         
         let mut generator = RngPrivateKeyGenerator::new(mock_rng);
         
-        let key1: SolanaPrivateKey2 = generator.generate();
-        let key2: SolanaPrivateKey2 = generator.generate();
-        let key3: SolanaPrivateKey2 = generator.generate();
+        let key1: SolanaKey = generator.generate();
+        let key2: SolanaKey = generator.generate();
+        let key3: SolanaKey = generator.generate();
         
         // All keys should be different
         assert_ne!(key1.to_string(), key2.to_string());
@@ -427,7 +427,7 @@ mod tests {
 
     #[test]
     fn test_mixed_blockchain_key_generation() {
-        use crate::solana::solana_private_key::SolanaPrivateKey2;
+        use crate::solana::PrivateKey as SolanaKey;
         
         let mock_rng = MockRng::new(vec![
             vec![0x10; 32],  // EVM
@@ -439,10 +439,10 @@ mod tests {
         let mut generator = RngPrivateKeyGenerator::new(mock_rng);
         
         // Alternate between blockchain types
-        let evm1: EVMPrivateKey2 = generator.generate();
-        let sol1: SolanaPrivateKey2 = generator.generate();
-        let evm2: EVMPrivateKey2 = generator.generate();
-        let sol2: SolanaPrivateKey2 = generator.generate();
+        let evm1: EvmKey = generator.generate();
+        let sol1: SolanaKey = generator.generate();
+        let evm2: EvmKey = generator.generate();
+        let sol2: SolanaKey = generator.generate();
         
         // Verify correct sizes
         assert_eq!(evm1.as_bytes().len(), 32);
@@ -461,8 +461,8 @@ mod tests {
         let mut generator = RngPrivateKeyGenerator::new(ThreadRngFillBytes::new());
         
         // Generate EVM keys
-        let key1: EVMPrivateKey2 = generator.generate();
-        let key2: EVMPrivateKey2 = generator.generate();
+        let key1: EvmKey = generator.generate();
+        let key2: EvmKey = generator.generate();
         
         // Keys should be different (extremely unlikely to be the same)
         assert_ne!(key1.to_string(), key2.to_string());
@@ -476,18 +476,18 @@ mod tests {
 
     #[test]
     fn test_thread_rng_with_multiple_blockchains() {
-        use crate::solana::solana_private_key::SolanaPrivateKey2;
+        use crate::solana::PrivateKey as SolanaKey;
         
         // Test that ThreadRngFillBytes works with different blockchain types
         let mut generator = RngPrivateKeyGenerator::new(ThreadRngFillBytes::new());
         
         // Generate EVM keys (32 bytes each)
-        let evm_key1: EVMPrivateKey2 = generator.generate();
-        let evm_key2: EVMPrivateKey2 = generator.generate();
+        let evm_key1: EvmKey = generator.generate();
+        let evm_key2: EvmKey = generator.generate();
         
         // Generate Solana keys with the same generator (64 bytes each)
-        let sol_key1: SolanaPrivateKey2 = generator.generate();
-        let sol_key2: SolanaPrivateKey2 = generator.generate();
+        let sol_key1: SolanaKey = generator.generate();
+        let sol_key2: SolanaKey = generator.generate();
         
         // All keys should be valid and different
         assert_ne!(evm_key1.to_string(), evm_key2.to_string());

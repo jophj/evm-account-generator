@@ -19,16 +19,16 @@
 //! ```rust
 //! use evm_account_generator::{
 //!     RngPrivateKeyGenerator, PrivateKeyGenerator, ThreadRngFillBytes,
-//!     PrivateKey2, solana::solana_private_key::SolanaPrivateKey2,
+//!     PrivateKey, solana::PrivateKey as SolanaKey,
 //! };
 //!
 //! let mut generator = RngPrivateKeyGenerator::new(ThreadRngFillBytes::new());
-//! let key: SolanaPrivateKey2 = generator.generate();
+//! let key: SolanaKey = generator.generate();
 //!
 //! println!("Private Key: {}", key.to_string());
 //! println!("Address: {}", key.derive_address());
 //! ```
 
-pub mod solana_private_key;
-pub use solana_private_key::SolanaPrivateKey2;
+mod private_key;
 
+pub use private_key::{SolanaPrivateKey as PrivateKey, SolanaAddress as Address};

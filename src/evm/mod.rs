@@ -15,14 +15,16 @@
 //! ```rust
 //! use evm_account_generator::{
 //!     RngPrivateKeyGenerator, PrivateKeyGenerator, ThreadRngFillBytes,
-//!     PrivateKey2, evm::evm_private_key::EVMPrivateKey2,
+//!     PrivateKey, evm::PrivateKey as EvmKey,
 //! };
 //!
 //! let mut generator = RngPrivateKeyGenerator::new(ThreadRngFillBytes::new());
-//! let key: EVMPrivateKey2 = generator.generate();
+//! let key: EvmKey = generator.generate();
 //!
 //! println!("Private Key: {}", key.to_string());
 //! println!("Address: {}", key.derive_address());
 //! ```
 
-pub mod evm_private_key;
+mod private_key;
+
+pub use private_key::{EvmPrivateKey as PrivateKey, EvmAddress as Address};

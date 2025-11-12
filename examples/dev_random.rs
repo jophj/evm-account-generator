@@ -37,8 +37,8 @@ use evm_account_generator::{
     DevRandomRng, 
     RngPrivateKeyGenerator, 
     PrivateKeyGenerator,
-    PrivateKey2,
-    evm::evm_private_key::EVMPrivateKey2,
+    PrivateKey,
+    evm::PrivateKey as EvmKey,
 };
 
 fn main() {
@@ -66,7 +66,7 @@ fn main() {
     // Generate an EVM private key
     // This reads 32 bytes from /dev/random
     println!("Generating first key (may block if entropy is low)...");
-    let private_key: EVMPrivateKey2 = generator.generate();
+    let private_key: EvmKey = generator.generate();
     
     // Display the results
     println!("✓ Successfully generated EVM private key");
@@ -78,7 +78,7 @@ fn main() {
     println!("Generating 3 additional keys...\n");
     for i in 1..=3 {
         println!("Generating key {}...", i);
-        let key: EVMPrivateKey2 = generator.generate();
+        let key: EvmKey = generator.generate();
         println!("  Key:     {}", key.to_string());
         println!("  Address: {}", key.derive_address());
         println!();

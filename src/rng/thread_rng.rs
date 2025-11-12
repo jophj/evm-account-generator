@@ -26,11 +26,11 @@ use crate::FillBytes;
 /// ```rust
 /// use evm_account_generator::{
 ///     RngPrivateKeyGenerator, PrivateKeyGenerator, ThreadRngFillBytes,
-///     PrivateKey2, evm::evm_private_key::EVMPrivateKey2,
+///     PrivateKey, evm::PrivateKey as EvmKey,
 /// };
 ///
 /// let mut generator = RngPrivateKeyGenerator::new(ThreadRngFillBytes::new());
-/// let key: EVMPrivateKey2 = generator.generate();
+/// let key: EvmKey = generator.generate();
 /// println!("Generated key: {}", key.to_string());
 /// ```
 pub struct ThreadRngFillBytes(rand::rngs::ThreadRng);
@@ -90,3 +90,4 @@ mod tests {
         assert_ne!(dest, [0u8; 32]);
     }
 }
+

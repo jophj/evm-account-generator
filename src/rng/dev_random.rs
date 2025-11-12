@@ -38,12 +38,12 @@ use crate::FillBytes;
 /// ```rust,no_run
 /// use evm_account_generator::{
 ///     DevRandomRng, RngPrivateKeyGenerator, PrivateKeyGenerator,
-///     PrivateKey2, evm::evm_private_key::EVMPrivateKey2,
+///     PrivateKey, evm::PrivateKey as EvmKey,
 /// };
 ///
 /// let rng = DevRandomRng::new();
 /// let mut generator = RngPrivateKeyGenerator::new(rng);
-/// let key: EVMPrivateKey2 = generator.generate();
+/// let key: EvmKey = generator.generate();
 /// ```
 pub struct DevRandomRng(File);
 
@@ -112,10 +112,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_thread_rng_fill_bytes() {
+    fn test_dev_random_fill_bytes() {
         let mut rng = DevRandomRng::new();
         let mut dest = [0u8; 32];
         rng.fill_bytes(&mut dest);
         assert_ne!(dest, [0u8; 32]);
     }
 }
+

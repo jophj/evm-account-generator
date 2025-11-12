@@ -13,8 +13,8 @@ use evm_account_generator::{
     RngPrivateKeyGenerator,
     PrivateKeyGenerator,
     ThreadRngFillBytes,
-    PrivateKey2,
-    evm::evm_private_key::EVMPrivateKey2,
+    PrivateKey,
+    evm::PrivateKey as EvmKey,
 };
 
 fn main() {
@@ -38,7 +38,7 @@ fn main() {
     // - Generates 32 random bytes (EVM key size)
     // - Validates the key (non-zero, within secp256k1 curve order)
     // - Retries if invalid (extremely rare)
-    let private_key: EVMPrivateKey2 = generator.generate();
+    let private_key: EvmKey = generator.generate();
     
     // Step 4: Display the results
     println!("Generated EVM private key:");

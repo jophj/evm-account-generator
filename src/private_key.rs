@@ -1,6 +1,6 @@
 //! Core trait defining the interface for blockchain private keys
 //!
-//! This module provides the [`PrivateKey2`] trait which defines a common interface
+//! This module provides the [`PrivateKey`] trait which defines a common interface
 //! for private keys across different blockchain networks. The trait is designed to be
 //! blockchain-agnostic, allowing the same generator and utilities to work with
 //! keys from different networks.
@@ -24,11 +24,11 @@
 /// # Examples
 ///
 /// ```rust
-/// use evm_account_generator::{PrivateKey2, evm::evm_private_key::EVMPrivateKey2};
+/// use evm_account_generator::{PrivateKey, evm::PrivateKey as EvmKey};
 ///
 /// // Create an EVM private key from bytes
 /// let bytes = [1u8; 32];
-/// let key = EVMPrivateKey2::new(&bytes).expect("Valid key");
+/// let key = EvmKey::new(&bytes).expect("Valid key");
 ///
 /// // Get the address
 /// let address = key.derive_address();
@@ -37,7 +37,7 @@
 /// // Convert to hex string
 /// println!("Private Key: {}", key.to_string());
 /// ```
-pub trait PrivateKey2: Sized + Clone {
+pub trait PrivateKey: Sized + Clone {
     /// The type of address this private key generates
     ///
     /// Each blockchain has its own address format (e.g., Ethereum uses 20-byte
@@ -60,10 +60,10 @@ pub trait PrivateKey2: Sized + Clone {
     /// # Examples
     ///
     /// ```rust
-    /// use evm_account_generator::{PrivateKey2, evm::evm_private_key::EVMPrivateKey2};
+    /// use evm_account_generator::{PrivateKey, evm::PrivateKey as EvmKey};
     ///
     /// let bytes = [1u8; 32];
-    /// let key = EVMPrivateKey2::new(&bytes).expect("Valid key");
+    /// let key = EvmKey::new(&bytes).expect("Valid key");
     /// ```
     fn new(bytes: &[u8]) -> Option<Self>;
 
@@ -82,9 +82,9 @@ pub trait PrivateKey2: Sized + Clone {
     /// # Examples
     ///
     /// ```rust
-    /// use evm_account_generator::{PrivateKey2, evm::evm_private_key::EVMPrivateKey2};
+    /// use evm_account_generator::{PrivateKey, evm::PrivateKey as EvmKey};
     ///
-    /// let key = EVMPrivateKey2::from_string(
+    /// let key = EvmKey::from_string(
     ///     "0x0101010101010101010101010101010101010101010101010101010101010101"
     /// ).expect("Valid key");
     /// ```

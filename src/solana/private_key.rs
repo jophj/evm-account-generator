@@ -8,7 +8,7 @@
 //! applications should use the official `solana-sdk` crate which provides proper
 //! Ed25519 key derivation, base58 encoding, and all Solana-specific functionality.
 
-use crate::private_key::PrivateKey2;
+use crate::PrivateKey as PrivateKeyTrait;
 
 /// Solana-specific private key implementation
 ///
@@ -26,7 +26,7 @@ use crate::private_key::PrivateKey2;
 /// This is a simplified implementation. Real Solana keypairs have more complex
 /// structure and validation requirements.
 #[derive(Debug, Clone, PartialEq)]
-pub struct SolanaPrivateKey2([u8; 64]);
+pub struct SolanaPrivateKey([u8; 64]);
 
 /// Solana address type
 ///
@@ -41,7 +41,7 @@ impl std::fmt::Display for SolanaAddress {
     }
 }
 
-impl SolanaPrivateKey2 {
+impl SolanaPrivateKey {
     /// Validates if the byte slice is a valid Solana private key
     ///
     /// For this simplified implementation, a valid key must:
@@ -71,7 +71,7 @@ impl SolanaPrivateKey2 {
     }
 }
 
-impl PrivateKey2 for SolanaPrivateKey2 {
+impl PrivateKeyTrait for SolanaPrivateKey {
     type Address = SolanaAddress;
 
     fn new(bytes: &[u8]) -> Option<Self> {
@@ -118,7 +118,7 @@ impl PrivateKey2 for SolanaPrivateKey2 {
     }
 
     fn is_valid(bytes: &[u8]) -> bool {
-        SolanaPrivateKey2::is_valid(bytes)
+        SolanaPrivateKey::is_valid(bytes)
     }
 
     fn key_size() -> usize {
@@ -148,15 +148,15 @@ mod tests {
     #[test]
     fn test_solana_private_key_creation() {
         let bytes = [0x12u8; 64];
-        let private_key = SolanaPrivateKey2::new(&bytes).expect("Valid key");
+        let private_key = SolanaPrivateKey::new(&bytes).expect("Valid key");
         assert_eq!(private_key.as_bytes(), &bytes);
-        assert_eq!(SolanaPrivateKey2::key_size(), 64);
+        assert_eq!(SolanaPrivateKey::key_size(), 64);
     }
 
     #[test]
     fn test_solana_address_derivation() {
         let bytes = [0x12u8; 64];
-        let private_key = SolanaPrivateKey2::new(&bytes).expect("Valid key");
+        let private_key = SolanaPrivateKey::new(&bytes).expect("Valid key");
         let address = private_key.derive_address();
         assert!(address.to_string().starts_with("Sol"));
     }
@@ -165,20 +165,20 @@ mod tests {
     fn test_invalid_solana_key() {
         // All zeros should be invalid
         let zeros = [0u8; 64];
-        assert!(SolanaPrivateKey2::new(&zeros).is_none());
+        assert!(SolanaPrivateKey::new(&zeros).is_none());
         
         // Wrong size should be invalid
         let wrong_size = [1u8; 32];
-        assert!(SolanaPrivateKey2::new(&wrong_size).is_none());
+        assert!(SolanaPrivateKey::new(&wrong_size).is_none());
         
         let wrong_size_2 = [1u8; 63];
-        assert!(SolanaPrivateKey2::new(&wrong_size_2).is_none());
+        assert!(SolanaPrivateKey::new(&wrong_size_2).is_none());
     }
 
     #[test]
     fn test_solana_from_string() {
         let hex = "0x11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
-        let private_key = SolanaPrivateKey2::from_string(hex).expect("Valid hex");
+        let private_key = SolanaPrivateKey::from_string(hex).expect("Valid hex");
         assert_eq!(private_key.to_string(), hex);
     }
 }

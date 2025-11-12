@@ -3,7 +3,7 @@
 //! This module implements the EVM-specific private key type using ECDSA secp256k1
 //! cryptography and Keccak-256 hashing for address derivation.
 
-use crate::private_key::PrivateKey2;
+use crate::PrivateKey;
 use keccak_asm::{Digest, Keccak256};
 use secp256k1::{PublicKey, Secp256k1, SecretKey};
 
@@ -21,14 +21,14 @@ use secp256k1::{PublicKey, Secp256k1, SecretKey};
 ///
 /// Invalid keys are automatically rejected during creation.
 #[derive(Debug, Clone, PartialEq)]
-pub struct EVMPrivateKey2([u8; 32]);
+pub struct EvmPrivateKey([u8; 32]);
 
 /// EVM address type
 ///
 /// Represents a 20-byte Ethereum address derived from the public key
 /// using Keccak-256 hashing.
 #[derive(Debug, Clone, PartialEq)]
-pub struct EVMAddress([u8; 20]);
+pub struct EvmAddress([u8; 20]);
 
 /// The order (n) of the secp256k1 elliptic curve
 ///
@@ -41,13 +41,13 @@ pub const SECP256K1_ORDER: [u8; 32] = [
     0xBF, 0xD2, 0x5E, 0x8C, 0xD0, 0x36, 0x41, 0x41,
 ];
 
-impl std::fmt::Display for EVMAddress {
+impl std::fmt::Display for EvmAddress {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "0x{}", hex::encode(self.0))
     }
 }
 
-impl EVMPrivateKey2 {
+impl EvmPrivateKey {
     /// Validates if the byte slice is a valid EVM private key
     ///
     /// Checks three conditions:
@@ -66,13 +66,13 @@ impl EVMPrivateKey2 {
     /// # Examples
     ///
     /// ```rust
-    /// use evm_account_generator::evm::evm_private_key::EVMPrivateKey2;
+    /// use evm_account_generator::evm::PrivateKey as EvmKey;
     ///
     /// let valid_bytes = [1u8; 32];
-    /// assert!(EVMPrivateKey2::is_valid(&valid_bytes));
+    /// assert!(EvmKey::is_valid(&valid_bytes));
     ///
     /// let invalid_zeros = [0u8; 32];
-    /// assert!(!EVMPrivateKey2::is_valid(&invalid_zeros));
+    /// assert!(!EvmKey::is_valid(&invalid_zeros));
     /// ```
     pub fn is_valid(bytes: &[u8]) -> bool {
         // Check length
@@ -100,8 +100,8 @@ impl EVMPrivateKey2 {
     }
 }
 
-impl PrivateKey2 for EVMPrivateKey2 {
-    type Address = EVMAddress;
+impl PrivateKey for EvmPrivateKey {
+    type Address = EvmAddress;
 
     fn new(bytes: &[u8]) -> Option<Self> {
         if bytes.len() != 32 || !Self::is_valid(bytes) {
@@ -162,11 +162,11 @@ impl PrivateKey2 for EVMPrivateKey2 {
         // Take the last 20 bytes of the hash as the Ethereum address
         let mut address_bytes = [0u8; 20];
         address_bytes.copy_from_slice(&hash[12..32]);
-        EVMAddress(address_bytes)
+        EvmAddress(address_bytes)
     }
 
     fn is_valid(bytes: &[u8]) -> bool {
-        EVMPrivateKey2::is_valid(bytes)
+        EvmPrivateKey::is_valid(bytes)
     }
 
     fn key_size() -> usize {
@@ -180,7 +180,7 @@ impl PrivateKey2 for EVMPrivateKey2 {
             return None;
         }
 
-        let bytes = hex::decode(clean_hex).unwrap();
+        let bytes = hex::decode(clean_hex).ok()?;
 
         let mut key_bytes = [0u8; 32];
         key_bytes.copy_from_slice(&bytes);
@@ -196,16 +196,17 @@ mod tests {
     #[test]
     fn test_evm_private_key_creation() {
         let bytes = [0x12u8; 32];
-        let private_key = EVMPrivateKey2::new(&bytes).expect("Valid key");
+        let private_key = EvmPrivateKey::new(&bytes).expect("Valid key");
         assert_eq!(private_key.as_bytes(), &bytes);
-        assert_eq!(EVMPrivateKey2::key_size(), 32);
+        assert_eq!(EvmPrivateKey::key_size(), 32);
     }
 
     #[test]
     fn test_evm_address_derivation() {
         let bytes = [0x12u8; 32];
-        let private_key = EVMPrivateKey2::new(&bytes).expect("Valid key");
+        let private_key = EvmPrivateKey::new(&bytes).expect("Valid key");
         let address = private_key.derive_address();
         assert!(address.to_string().starts_with("0x"));
     }
 }
+

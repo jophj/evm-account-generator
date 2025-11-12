@@ -18,9 +18,9 @@
 //! - **Solana**: 64-byte Ed25519 keypairs
 
 use evm_account_generator::{
-    PrivateKey2, PrivateKeyGenerator, RngPrivateKeyGenerator, FillBytes, ThreadRngFillBytes,
-    evm::evm_private_key::EVMPrivateKey2,
-    solana::solana_private_key::SolanaPrivateKey2,
+    PrivateKey, PrivateKeyGenerator, RngPrivateKeyGenerator, FillBytes, ThreadRngFillBytes,
+    evm::PrivateKey as EvmKey,
+    solana::PrivateKey as SolanaKey,
 };
 
 fn main() {
@@ -40,7 +40,7 @@ fn main() {
     
     for i in 1..=3 {
         // The type annotation tells the generator to create an EVM key
-        let key: EVMPrivateKey2 = generator.generate();
+        let key: EvmKey = generator.generate();
         let address = key.derive_address();
         
         println!("EVM Key #{}", i);
@@ -58,7 +58,7 @@ fn main() {
     
     for i in 1..=3 {
         // Same generator, different type annotation = different blockchain
-        let key: SolanaPrivateKey2 = generator.generate();
+        let key: SolanaKey = generator.generate();
         let address = key.derive_address();
         
         println!("Solana Key #{}", i);
@@ -73,8 +73,8 @@ fn main() {
     
     // === Demonstrate Key Size Detection ===
     println!("\n--- Key Size Information ---");
-    println!("EVM key size:    {} bytes", EVMPrivateKey2::key_size());
-    println!("Solana key size: {} bytes", SolanaPrivateKey2::key_size());
+    println!("EVM key size:    {} bytes", EvmKey::key_size());
+    println!("Solana key size: {} bytes", SolanaKey::key_size());
     
     println!("\n✓ Multi-blockchain key generation completed successfully!");
     println!("\n💡 Key Insight:");
@@ -85,7 +85,7 @@ fn main() {
 /// Generic function that works with any blockchain's private key
 ///
 /// This demonstrates how you can write blockchain-agnostic code that works
-/// with any type implementing PrivateKey2.
+/// with any type implementing PrivateKey.
 ///
 /// # Type Parameters
 ///
@@ -94,16 +94,16 @@ fn demonstrate_generic_function<R: FillBytes>(
     generator: &mut RngPrivateKeyGenerator<R>
 ) {
     println!("--- Generic Function Demo ---");
-    println!("This function works with ANY blockchain that implements PrivateKey2\n");
+    println!("This function works with ANY blockchain that implements PrivateKey\n");
     
     // Generate keys of different types using type annotations
-    let evm_key: EVMPrivateKey2 = generator.generate();
+    let evm_key: EvmKey = generator.generate();
     println!("Generated EVM key:");
     println!("  Size: {} bytes", evm_key.as_bytes().len());
     println!("  Key:  {}", evm_key.to_string());
     println!();
     
-    let solana_key: SolanaPrivateKey2 = generator.generate();
+    let solana_key: SolanaKey = generator.generate();
     println!("Generated Solana key:");
     println!("  Size: {} bytes", solana_key.as_bytes().len());
     println!("  Key:  {}", solana_key.to_string());
