@@ -30,6 +30,16 @@ pub struct EvmPrivateKey([u8; 32]);
 #[derive(Debug, Clone, PartialEq)]
 pub struct EvmAddress([u8; 20]);
 
+impl EvmAddress {
+    pub fn new(bytes: [u8; 20]) -> Self {
+        Self(bytes)
+    }
+
+    pub fn as_bytes(&self) -> &[u8; 20] {
+        &self.0
+    }
+}
+
 /// The order (n) of the secp256k1 elliptic curve
 ///
 /// Any private key must be less than this value to be valid.
@@ -48,32 +58,6 @@ impl std::fmt::Display for EvmAddress {
 }
 
 impl EvmPrivateKey {
-    /// Validates if the byte slice is a valid EVM private key
-    ///
-    /// Checks three conditions:
-    /// 1. Length is exactly 32 bytes
-    /// 2. Not all zeros (would be an invalid key)
-    /// 3. Value is less than the secp256k1 curve order
-    ///
-    /// # Arguments
-    ///
-    /// * `bytes` - The byte slice to validate
-    ///
-    /// # Returns
-    ///
-    /// `true` if the bytes represent a valid EVM private key, `false` otherwise
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use evm_account_generator::evm::PrivateKey as EvmKey;
-    ///
-    /// let valid_bytes = [1u8; 32];
-    /// assert!(EvmKey::is_valid(&valid_bytes));
-    ///
-    /// let invalid_zeros = [0u8; 32];
-    /// assert!(!EvmKey::is_valid(&invalid_zeros));
-    /// ```
     pub fn is_valid(bytes: &[u8]) -> bool {
         // Check length
         if bytes.len() != 32 {

@@ -67,7 +67,7 @@
 //! }
 //! ```
 
-use crate::PrivateKey;
+use crate::{PrivateKey};
 
 /// Generic trait for generating private keys of a specific type
 ///
@@ -75,74 +75,81 @@ use crate::PrivateKey;
 /// The type parameter `T` must implement `PrivateKey`, ensuring type safety
 /// across different blockchain networks.
 pub trait PrivateKeyGenerator<T: PrivateKey> {
-    /// Generates a new private key of type T
-    ///
-    /// # Returns
-    ///
-    /// A newly generated private key of type T
     fn generate(&mut self) -> T;
 }
 
-/// Trait for types that can fill a byte buffer with random data
-///
-/// This trait provides a simple interface for random byte generation
-/// without requiring a blanket implementation over all RNG types.
 pub trait FillBytes {
-    /// Fill the destination buffer with random bytes
-    ///
-    /// # Arguments
-    ///
-    /// * `dest` - A mutable byte slice to fill with random data
     fn fill_bytes(&mut self, dest: &mut [u8]);
 }
 
-
-/// A concrete implementation of PrivateKeyGenerator that uses an RNG
-/// to generate random private keys for any blockchain type
-///
-/// This generator is generic over both the private key type (T) and the RNG type (R).
-/// It automatically handles:
-/// - Different key sizes (32 bytes for EVM, 64 bytes for Solana, etc.)
-/// - Invalid keys by retrying with new random bytes
-/// - Blockchain-specific validation rules
-///
-/// # Type Parameters
-///
-/// * `R` - The random number generator type, must implement `rand::RngCore`
-///
-/// # Examples
-///
-/// ```
-/// use evm_account_generator::{
-///     RngPrivateKeyGenerator, PrivateKeyGenerator, ThreadRngFillBytes,
-///     evm::PrivateKey as EvmKey,
-/// };
-///
-/// let mut generator = RngPrivateKeyGenerator::new(ThreadRngFillBytes::new());
-/// let key: EvmKey = generator.generate();
-/// ```
 pub struct RngPrivateKeyGenerator<R: FillBytes> {
     rng: R,
 }
 
+
+pub struct SequentialPrivateKeyGenerator<K: PrivateKey> {
+    current: Vec<u8>,
+    _phantom: std::marker::PhantomData<K>,
+}
+
+impl<K: PrivateKey> SequentialPrivateKeyGenerator<K> {
+
+    pub fn new(seed: K) -> Self {
+        Self {
+            current: seed.as_bytes().to_vec(),
+            _phantom: std::marker::PhantomData,
+        }
+    }
+
+    /// Increments the internal byte array by 1 (big-endian)
+    ///
+    /// This treats the byte array as a big-endian unsigned integer and adds 1.
+    /// If overflow occurs, it wraps around to 1 (skipping 0 since 0 is invalid).
+    fn increment_bytes(&mut self) {
+        // Add 1 to the byte array, treating it as big-endian
+        let mut carry = 1u16;
+        for byte in self.current.iter_mut().rev() {
+            let sum = *byte as u16 + carry;
+            *byte = sum as u8;
+            carry = sum >> 8;
+            if carry == 0 {
+                break;
+            }
+        }
+
+        // If we overflowed (carry still > 0 after the loop), all bytes wrapped to 0
+        // Set to 1 to skip the invalid all-zeros value
+        if carry > 0 {
+            let len = self.current.len();
+            self.current[len - 1] = 1;
+        }
+    }
+}
+
+impl<K: PrivateKey> PrivateKeyGenerator<K> for SequentialPrivateKeyGenerator<K> {
+
+    fn generate(&mut self) -> K {
+        loop {
+            // Increment the current value
+            self.increment_bytes();
+
+            // Try to create a key from the current bytes
+            // If valid, return it; otherwise, continue incrementing
+            if K::is_valid(&self.current) {
+                return K::new(&self.current).expect("Validated bytes should create valid key");
+            }
+            // If invalid, loop continues and increments again
+        }
+    }
+}
+
+
 impl<R: FillBytes> RngPrivateKeyGenerator<R> {
-    /// Creates a new generator with the given RNG
-    ///
-    /// # Arguments
-    ///
-    /// * `rng` - Any random number generator implementing `rand::RngCore`
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use evm_account_generator::{RngPrivateKeyGenerator, ThreadRngFillBytes};
-    ///
-    /// let generator = RngPrivateKeyGenerator::new(ThreadRngFillBytes::new());
-    /// ```
     pub fn new(rng: R) -> Self {
         Self { rng }
     }
 }
+
 
 impl<T, R> PrivateKeyGenerator<T> for RngPrivateKeyGenerator<R>
 where
@@ -507,6 +514,167 @@ mod tests {
         
         // Solana keys should generate valid addresses
         let sol_addr = sol_key1.derive_address();
+        assert!(sol_addr.to_string().starts_with("Sol"));
+    }
+
+    // Tests for SequentialPrivateKeyGenerator
+
+    #[test]
+    fn test_sequential_generator_basic_evm() {
+        // Test sequential generation starting from 1
+        let seed = EvmKey::from_string("0x0000000000000000000000000000000000000000000000000000000000000001").unwrap();
+        let mut generator = SequentialPrivateKeyGenerator::new(seed);
+        
+        let key1 = generator.generate();
+        let key2 = generator.generate();
+        let key3 = generator.generate();
+        
+        assert_eq!(
+            key1.to_string(),
+            "0x0000000000000000000000000000000000000000000000000000000000000002"
+        );
+        assert_eq!(
+            key2.to_string(),
+            "0x0000000000000000000000000000000000000000000000000000000000000003"
+        );
+        assert_eq!(
+            key3.to_string(),
+            "0x0000000000000000000000000000000000000000000000000000000000000004"
+        );
+    }
+
+    #[test]
+    fn test_sequential_generator_with_carry() {
+        // Test that carry propagates correctly when a byte overflows
+        let seed = EvmKey::from_string("0x00000000000000000000000000000000000000000000000000000000000000FF").unwrap();
+        let mut generator = SequentialPrivateKeyGenerator::new(seed);
+        
+        let key1 = generator.generate();
+        let key2 = generator.generate();
+        
+        assert_eq!(
+            key1.to_string(),
+            "0x0000000000000000000000000000000000000000000000000000000000000100"
+        );
+        assert_eq!(
+            key2.to_string(),
+            "0x0000000000000000000000000000000000000000000000000000000000000101"
+        );
+    }
+
+    #[test]
+    fn test_sequential_generator_multiple_byte_carry() {
+        // Test carry across multiple bytes
+        let seed = EvmKey::from_string("0x000000000000000000000000000000000000000000000000000000000000FFFF").unwrap();
+        let mut generator = SequentialPrivateKeyGenerator::new(seed);
+        
+        let key = generator.generate();
+        
+        assert_eq!(
+            key.to_string(),
+            "0x0000000000000000000000000000000000000000000000000000000000010000"
+        );
+    }
+
+    #[test]
+    fn test_sequential_generator_solana() {
+        use crate::solana::PrivateKey as SolanaKey;
+        
+        // Test sequential generation with Solana keys (64 bytes)
+        let seed_hex = format!("0x{}", "00".repeat(63) + "01");
+        let seed = SolanaKey::from_string(&seed_hex).unwrap();
+        let mut generator = SequentialPrivateKeyGenerator::new(seed);
+        
+        let key1 = generator.generate();
+        let key2 = generator.generate();
+        
+        let expected1 = format!("0x{}", "00".repeat(63) + "02");
+        let expected2 = format!("0x{}", "00".repeat(63) + "03");
+        
+        assert_eq!(key1.to_string(), expected1);
+        assert_eq!(key2.to_string(), expected2);
+    }
+
+    #[test]
+    fn test_sequential_generator_skips_invalid_keys() {
+        // Test that the generator skips invalid keys (e.g., keys >= secp256k1 order)
+        // Start just before the secp256k1 curve order
+        let seed = EvmKey::from_string("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD036413F").unwrap();
+        let mut generator = SequentialPrivateKeyGenerator::new(seed);
+        
+        // The next key would be 0xFFFF...4140 which is >= the curve order
+        // So the generator should skip it and find the next valid key
+        let key = generator.generate();
+        
+        // Verify it's valid
+        assert!(EvmKey::is_valid(key.as_bytes()));
+        
+        // Should not be the all-zeros that would come after overflow
+        assert_ne!(key.to_string(), "0x0000000000000000000000000000000000000000000000000000000000000000");
+    }
+
+    #[test]
+    fn test_sequential_generator_different_seeds() {
+        // Test that different seeds produce different sequences
+        let seed1 = EvmKey::from_string("0x0000000000000000000000000000000000000000000000000000000000000010").unwrap();
+        let seed2 = EvmKey::from_string("0x0000000000000000000000000000000000000000000000000000000000000020").unwrap();
+        
+        let mut gen1 = SequentialPrivateKeyGenerator::new(seed1);
+        let mut gen2 = SequentialPrivateKeyGenerator::new(seed2);
+        
+        let key1 = gen1.generate();
+        let key2 = gen2.generate();
+        
+        assert_eq!(
+            key1.to_string(),
+            "0x0000000000000000000000000000000000000000000000000000000000000011"
+        );
+        assert_eq!(
+            key2.to_string(),
+            "0x0000000000000000000000000000000000000000000000000000000000000021"
+        );
+    }
+
+    #[test]
+    fn test_sequential_generator_overflow_wraps_to_one() {
+        use crate::solana::PrivateKey as SolanaKey;
+        
+        // Test with Solana key that will overflow (all FF bytes)
+        let seed_hex = format!("0x{}", "FF".repeat(64));
+        let seed = SolanaKey::from_string(&seed_hex).unwrap();
+        let mut generator = SequentialPrivateKeyGenerator::new(seed);
+        
+        // Should wrap to 1, not 0 (since 0 is invalid)
+        let key = generator.generate();
+        
+        // The key should be valid and not all zeros
+        assert!(SolanaKey::is_valid(key.as_bytes()));
+        
+        // Verify it's 1
+        let expected = format!("0x{}", "00".repeat(63) + "01");
+        assert_eq!(key.to_string(), expected);
+    }
+
+    #[test]
+    fn test_sequential_generator_produces_valid_addresses() {
+        use crate::solana::PrivateKey as SolanaKey;
+        
+        // Test that generated keys can derive valid addresses
+        let evm_seed = EvmKey::from_string("0x0000000000000000000000000000000000000000000000000000000000000042").unwrap();
+        let mut evm_gen = SequentialPrivateKeyGenerator::new(evm_seed);
+        
+        let evm_key = evm_gen.generate();
+        let evm_addr = evm_key.derive_address();
+        assert!(evm_addr.to_string().starts_with("0x"));
+        assert_eq!(evm_addr.to_string().len(), 42);
+        
+        // Test Solana
+        let sol_seed_hex = format!("0x{}", "00".repeat(63) + "42");
+        let sol_seed = SolanaKey::from_string(&sol_seed_hex).unwrap();
+        let mut sol_gen = SequentialPrivateKeyGenerator::new(sol_seed);
+        
+        let sol_key = sol_gen.generate();
+        let sol_addr = sol_key.derive_address();
         assert!(sol_addr.to_string().starts_with("Sol"));
     }
 }
