@@ -2,6 +2,7 @@ use evm_account_generator::{
     evm::PrivateKey as EvmKey, PrivateKey, PrivateKeyGenerator, RngPrivateKeyGenerator,
     ThreadRngFillBytes,
 };
+use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc};
 use std::thread;
 use std::{
     sync::mpsc,
@@ -9,55 +10,106 @@ use std::{
 };
 
 fn main() {
-    let (tx, rx) = mpsc::channel();
-    let (tx2, rx2) = mpsc::channel();
+    let num_threads = thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(1);
+    
+    println!("Spawning {} threads (one per CPU core)", num_threads);
 
-    thread::spawn(move || {
-        let mut generator = RngPrivateKeyGenerator::new(ThreadRngFillBytes::new());
+    let (result_tx, result_rx) = mpsc::channel();
+    let (stats_tx, stats_rx) = mpsc::channel();
+    
+    let found = Arc::new(AtomicBool::new(false));
 
-        let prefix = [0x69];
-        let prefix_mask = [0xFF];
-        let suffix = [0x04, 0x20];
-        let suffix_mask = [0x0F, 0xFF];
+    // Spawn worker threads
+    let mut handles = vec![];
+    for thread_id in 0..num_threads {
+        let result_tx = result_tx.clone();
+        let stats_tx = stats_tx.clone();
+        let found = Arc::clone(&found);
+        
+        let handle = thread::spawn(move || {
+            let mut generator = RngPrivateKeyGenerator::new(ThreadRngFillBytes::new());
 
-        let mut private_key: EvmKey = generator.generate();
-        let mut count = 0;
-        loop {
-            let address = private_key.derive_address();
-            let addr_bytes = address.as_bytes();
+            let prefix = [0x69, 0x42, 0x00];
+            let prefix_mask = [0xFF, 0xFF, 0xF0];
+            let suffix = [0x04, 0x20];
+            let suffix_mask = [0x0F, 0xFF];
 
-            // Check prefix (first bytes)
-            let prefix_match = is_matching(&addr_bytes[..prefix.len()], &prefix, &prefix_mask);
-            // Check suffix (last bytes)
-            let suffix_match = is_matching(&addr_bytes[addr_bytes.len() - suffix.len()..], &suffix, &suffix_mask);
-
-            if prefix_match && suffix_match {
-                break;
-            }
-            private_key = generator.generate();
-
-            count += 1;
-            match rx2.try_recv() {
-                Ok(_) => {
-                    tx.send(count).unwrap();
-                    count = 0;
+            let mut private_key: EvmKey = generator.generate();
+            let mut count = 0;
+            let mut last_report = Instant::now();
+            
+            loop {
+                // Check if another thread already found a match
+                if found.load(Ordering::Relaxed) {
+                    return;
                 }
-                Err(_) => (),
+                
+                let address = private_key.derive_address();
+                let addr_bytes = address.as_bytes();
+
+                // Check prefix (first bytes)
+                let prefix_match = is_matching(&addr_bytes[..prefix.len()], &prefix, &prefix_mask);
+                // Check suffix (last bytes)
+                let suffix_match = true; //is_matching(&addr_bytes[addr_bytes.len() - suffix.len()..], &suffix, &suffix_mask);
+
+                if prefix_match && suffix_match {
+                    found.store(true, Ordering::Relaxed);
+                    result_tx.send((private_key.clone(), thread_id)).unwrap();
+                    return;
+                }
+                
+                private_key = generator.generate();
+                count += 1;
+
+                // Send stats periodically (every 100ms)
+                if last_report.elapsed() >= Duration::from_millis(100) {
+                    stats_tx.send(count).ok();
+                    count = 0;
+                    last_report = Instant::now();
+                }
             }
+        });
+        
+        handles.push(handle);
+    }
+
+    // Drop the original senders so channels close when all threads are done
+    drop(result_tx);
+    drop(stats_tx);
+
+    // Stats reporting loop
+    let mut time_start = Instant::now();
+    loop {
+        // Check if we found a result
+        if let Ok((private_key, thread_id)) = result_rx.try_recv() {
+            println!("\n✓ Found by thread {}!", thread_id);
+            println!("Private key: {}", private_key.to_string());
+            println!("Address: {}", private_key.derive_address());
+            break;
         }
 
-        println!("Found key: {}", private_key.to_string());
-        println!("Address: {}", private_key.derive_address());
-    });
-
-    let mut time_start = Instant::now();
-    while tx2.send(0).is_ok() {
         thread::sleep(Duration::from_millis(500));
-        let received = rx.recv().unwrap();
-        let time_now = Instant::now();
-        let duration = time_now.duration_since(time_start);
-        println!("{} keys per second", received * 1000 / duration.as_millis());
-        time_start = time_now;
+
+        // Collect stats from all threads
+        let mut total_count = 0;
+        while let Ok(count) = stats_rx.try_recv() {
+            total_count += count;
+        }
+
+        if total_count > 0 {
+            let time_now = Instant::now();
+            let duration = time_now.duration_since(time_start);
+            let keys_per_sec = (total_count as u128 * 1000) / duration.as_millis().max(1);
+            println!("{} keys/sec across {} threads", keys_per_sec, num_threads);
+            time_start = time_now;
+        }
+    }
+
+    // Wait for all threads to finish
+    for handle in handles {
+        handle.join().ok();
     }
 }
 
