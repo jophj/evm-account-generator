@@ -16,16 +16,22 @@ fn main() {
         let mut generator = RngPrivateKeyGenerator::new(ThreadRngFillBytes::new());
 
         let prefix = [0x69];
-        let suffix = [0x69];
+        let prefix_mask = [0xFF];
+        let suffix = [0x04, 0x20];
+        let suffix_mask = [0x0F, 0xFF];
 
         let mut private_key: EvmKey = generator.generate();
         let mut count = 0;
         loop {
             let address = private_key.derive_address();
+            let addr_bytes = address.as_bytes();
 
-            if is_matching(address.as_bytes(), &prefix, &[0xF0], false)
-                && is_matching(address.as_bytes(), &suffix, &[0x0F], true)
-            {
+            // Check prefix (first bytes)
+            let prefix_match = is_matching(&addr_bytes[..prefix.len()], &prefix, &prefix_mask);
+            // Check suffix (last bytes)
+            let suffix_match = is_matching(&addr_bytes[addr_bytes.len() - suffix.len()..], &suffix, &suffix_mask);
+
+            if prefix_match && suffix_match {
                 break;
             }
             private_key = generator.generate();
@@ -45,7 +51,7 @@ fn main() {
     });
 
     let mut time_start = Instant::now();
-    while (tx2.send(0).is_ok()) {
+    while tx2.send(0).is_ok() {
         thread::sleep(Duration::from_millis(500));
         let received = rx.recv().unwrap();
         let time_now = Instant::now();
@@ -55,55 +61,23 @@ fn main() {
     }
 }
 
-fn is_matching(test: &[u8], pattern: &[u8], bitmask: &[u8], from_right: bool) -> bool {
-    let slice = if from_right {
-        &test[pattern.len()..]
-    } else {
-        &test[..pattern.len()]
-    };
-
-    let nor = slice
-        .iter()
-        .zip(pattern.iter())
-        .map(|(a, b)| !(a ^ b))
-        .collect::<Vec<u8>>();
-    let masked = nor
-        .iter()
-        .zip(bitmask.iter())
-        .map(|(a, b)| a & b)
-        .collect::<Vec<u8>>();
-
-    let mut is_matching = true;
-
-    if from_right {
-        let mut current = 0x00;
-        for b in masked {
-            if b == current {
-                continue;
-            } else if b == 0x0F || b == 0xFF {
-                current = 0xFF;
-                continue;
-            } else {
-                is_matching = false;
-                break;
-            }
-        }
-        return is_matching;
-    } else {
-        let mut current = 0xFF;
-        for b in masked {
-            if b == current {
-                continue;
-            } else if b == 0xF0 || b == 0x00 {
-                current = 0x00;
-                continue;
-            } else {
-                is_matching = false;
-                break;
-            }
-        }
-        return is_matching;
+/// Checks if bits in `test` match bits in `pattern` where `bitmask` has 1s.
+/// 
+/// For each byte position:
+/// - (test[i] & bitmask[i]) == (pattern[i] & bitmask[i])
+/// 
+/// Returns false if arrays have different lengths.
+fn is_matching(test: &[u8], pattern: &[u8], bitmask: &[u8]) -> bool {
+    // All arrays should have the same length
+    if test.len() != pattern.len() || test.len() != bitmask.len() {
+        return false;
     }
+    
+    // Check if masked bits match for each byte
+    test.iter()
+        .zip(pattern.iter())
+        .zip(bitmask.iter())
+        .all(|((t, p), m)| (t & m) == (p & m))
 }
 
 #[cfg(test)]
@@ -112,22 +86,32 @@ mod tests {
 
     #[test]
     fn test_bitmask() {
-        assert_eq!(is_matching(&[0x04], &[0x04], &[0xFF], true), true);
-        assert_eq!(is_matching(&[0x04], &[0x14], &[0x0F], true), true);
-        // assert_eq!(is_matching(&[0x14], &[0x14], &[0x0F], true), true);
-        // assert_eq!(is_matching(&[0xA4], &[0x4A], &[0x00], true), true);
-        // assert_eq!(is_matching(&[0x14], &[0x04], &[0xFF], true), false);
-        // assert_eq!(is_matching(&[0x04], &[0x05], &[0xFF], true), false);
+        // Exact match with full mask
+        assert_eq!(is_matching(&[0x04], &[0x04], &[0xFF]), true);
+        
+        // Match only lower nibble (0x0F mask)
+        assert_eq!(is_matching(&[0x04], &[0x14], &[0x0F]), true);
+        assert_eq!(is_matching(&[0x14], &[0x24], &[0x0F]), true);
+        
+        // Match with empty mask (all bits ignored)
+        assert_eq!(is_matching(&[0xA4], &[0x4A], &[0x00]), true);
+        assert_eq!(is_matching(&[0x12], &[0x34], &[0x00]), true);
+        
+        // No match with full mask
+        assert_eq!(is_matching(&[0x14], &[0x04], &[0xFF]), false);
+        assert_eq!(is_matching(&[0x04], &[0x05], &[0xFF]), false);
 
-        // assert_eq!(is_matching(&[0x12], &[0x34], &[0x00], true), true);
-        // assert_eq!(is_matching(&[0x12], &[0x34], &[0x00], false), true);
+        // Multi-byte matching
+        assert_eq!(
+            is_matching(&[0xA4, 0x20], &[0xF4, 0x20], &[0x0F, 0xFF]),
+            true
+        );
 
-        // assert_eq!(
-        //     is_matching(&[0xA4, 0x20], &[0xF4, 0x20], &[0x0f, 0xff], true),
-        //     true
-        // );
-
-        // assert_eq!(is_matching(&[0xA4], &[0xA0], &[0xF0], false), true);
-        // assert_eq!(is_matching(&[0xA4], &[0xA0], &[0xF0], true), false);
+        // Match only upper nibble (0xF0 mask)
+        assert_eq!(is_matching(&[0xA4], &[0xA0], &[0xF0]), true);
+        assert_eq!(is_matching(&[0xA4], &[0xB0], &[0xF0]), false);
+        
+        // Different lengths should return false
+        assert_eq!(is_matching(&[0x04, 0x05], &[0x04], &[0xFF]), false);
     }
 }
