@@ -21,6 +21,9 @@ fn main() {
     
     let found = Arc::new(AtomicBool::new(false));
 
+    // Create report request channels for each thread
+    let mut report_senders = vec![];
+
     // Spawn worker threads
     let mut handles = vec![];
     for thread_id in 0..num_threads {
@@ -28,17 +31,20 @@ fn main() {
         let stats_tx = stats_tx.clone();
         let found = Arc::clone(&found);
         
+        // Create a channel for report requests to this specific thread
+        let (report_tx, report_rx) = mpsc::channel();
+        report_senders.push(report_tx);
+        
         let handle = thread::spawn(move || {
             let mut generator = RngPrivateKeyGenerator::new(ThreadRngFillBytes::new());
 
-            let prefix = [0x69, 0x42, 0x00];
+            let prefix = [0x69, 0x42, 0x20];
             let prefix_mask = [0xFF, 0xFF, 0xF0];
             let suffix = [0x04, 0x20];
             let suffix_mask = [0x0F, 0xFF];
 
             let mut private_key: EvmKey = generator.generate();
             let mut count = 0;
-            let mut last_report = Instant::now();
             
             loop {
                 // Check if another thread already found a match
@@ -52,7 +58,7 @@ fn main() {
                 // Check prefix (first bytes)
                 let prefix_match = is_matching(&addr_bytes[..prefix.len()], &prefix, &prefix_mask);
                 // Check suffix (last bytes)
-                let suffix_match = true; //is_matching(&addr_bytes[addr_bytes.len() - suffix.len()..], &suffix, &suffix_mask);
+                let suffix_match = is_matching(&addr_bytes[addr_bytes.len() - suffix.len()..], &suffix, &suffix_mask);
 
                 if prefix_match && suffix_match {
                     found.store(true, Ordering::Relaxed);
@@ -63,11 +69,13 @@ fn main() {
                 private_key = generator.generate();
                 count += 1;
 
-                // Send stats periodically (every 100ms)
-                if last_report.elapsed() >= Duration::from_millis(100) {
-                    stats_tx.send(count).ok();
-                    count = 0;
-                    last_report = Instant::now();
+                // Check for report request from main thread
+                match report_rx.try_recv() {
+                    Ok(_) => {
+                        stats_tx.send(count).ok();
+                        count = 0;
+                    }
+                    Err(_) => (),
                 }
             }
         });
@@ -88,6 +96,11 @@ fn main() {
             println!("Private key: {}", private_key.to_string());
             println!("Address: {}", private_key.derive_address());
             break;
+        }
+
+        // Send report requests to all threads
+        for sender in &report_senders {
+            sender.send(()).ok();
         }
 
         thread::sleep(Duration::from_millis(500));
