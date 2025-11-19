@@ -38,8 +38,8 @@ fn main() {
         let handle = thread::spawn(move || {
             let mut generator = RngPrivateKeyGenerator::new(ThreadRngFillBytes::new());
 
-            let prefix = [0x69, 0x42, 0x20];
-            let prefix_mask = [0xFF, 0xFF, 0xF0];
+            let prefix = [0x69];
+            let prefix_mask = [0xFF];
             let suffix = [0x04, 0x20];
             let suffix_mask = [0x0F, 0xFF];
 
