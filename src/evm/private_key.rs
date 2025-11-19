@@ -5,23 +5,15 @@
 
 use crate::PrivateKey;
 use keccak_asm::{Digest, Keccak256};
-use secp256k1::{PublicKey, Secp256k1, SecretKey};
+use secp256k1::{All, PublicKey, Secp256k1, SecretKey};
+use std::sync::LazyLock;
 
-/// EVM-specific private key implementation
-///
-/// Represents a 32-byte ECDSA secp256k1 private key used in Ethereum and
-/// other EVM-compatible blockchains.
-///
-/// # Validation Rules
-///
-/// A valid EVM private key must:
-/// - Be exactly 32 bytes
-/// - Not be all zeros
-/// - Be less than the secp256k1 curve order (n)
-///
-/// Invalid keys are automatically rejected during creation.
+static SECP: LazyLock<Secp256k1<All>> = LazyLock::new(|| Secp256k1::new());
+
 #[derive(Debug, Clone, PartialEq)]
-pub struct EvmPrivateKey([u8; 32]);
+pub struct EvmPrivateKey {
+    key: [u8; 32],
+}
 
 /// EVM address type
 ///
@@ -45,10 +37,8 @@ impl EvmAddress {
 /// Any private key must be less than this value to be valid.
 /// This is a fundamental constant of the secp256k1 curve used in Bitcoin and Ethereum.
 pub const SECP256K1_ORDER: [u8; 32] = [
-    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 
-    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFE,
-    0xBA, 0xAE, 0xDC, 0xE6, 0xAF, 0x48, 0xA0, 0x3B, 
-    0xBF, 0xD2, 0x5E, 0x8C, 0xD0, 0x36, 0x41, 0x41,
+    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFE,
+    0xBA, 0xAE, 0xDC, 0xE6, 0xAF, 0x48, 0xA0, 0x3B, 0xBF, 0xD2, 0x5E, 0x8C, 0xD0, 0x36, 0x41, 0x41,
 ];
 
 impl std::fmt::Display for EvmAddress {
@@ -72,9 +62,9 @@ impl EvmPrivateKey {
         // Check that the value is less than the secp256k1 curve order
         for i in 0..32 {
             if bytes[i] < SECP256K1_ORDER[i] {
-                return true;  // Found a byte less than the order, so the entire number is less
+                return true; // Found a byte less than the order, so the entire number is less
             } else if bytes[i] > SECP256K1_ORDER[i] {
-                return false;  // Found a byte greater than the order, so the entire number is greater
+                return false; // Found a byte greater than the order, so the entire number is greater
             }
             // If equal, continue checking the next byte
         }
@@ -93,15 +83,15 @@ impl PrivateKey for EvmPrivateKey {
         }
         let mut key_bytes = [0u8; 32];
         key_bytes.copy_from_slice(bytes);
-        Some(Self(key_bytes))
+        Some(Self { key: key_bytes })
     }
 
     fn as_bytes(&self) -> &[u8] {
-        &self.0
+        &self.key
     }
 
     fn to_string(&self) -> String {
-        format!("0x{}", hex::encode(&self.0))
+        format!("0x{}", hex::encode(&self.key))
     }
 
     /// Derives an Ethereum address from this private key
@@ -122,31 +112,27 @@ impl PrivateKey for EvmPrivateKey {
     /// - TODO: Add EIP-55 checksumming for mixed-case address display
     /// - TODO: Consider memoizing the address derivation for performance
     fn derive_address(&self) -> Self::Address {
-        // Create secp256k1 context
-        let secp = Secp256k1::new();
-        
         // Convert private key to secp256k1 SecretKey
         let secret_key =
-            SecretKey::from_slice(&self.0).expect("Private key should be valid for secp256k1");
+            SecretKey::from_slice(&self.key).expect("Private key should be valid for secp256k1");
 
         // Derive the public key
-        let public_key = PublicKey::from_secret_key(&secp, &secret_key);
-        
+        let public_key = PublicKey::from_secret_key(&SECP, &secret_key);
+
         // Serialize public key in uncompressed format (04 || x || y)
         let public_key_bytes = public_key.serialize_uncompressed();
-        
+
         // Skip the 0x04 prefix byte, use only the x and y coordinates
         let public_key_coords = &public_key_bytes[1..];
 
-        // Hash the coordinates with Keccak-256
-        let mut hasher = Keccak256::new();
-        hasher.update(public_key_coords);
-        let hash = hasher.finalize();
+        // Hash the coordinates with Keccak-256 (using a new hasher instance each time)
+        let hash = Keccak256::digest(public_key_coords);
 
         // Take the last 20 bytes of the hash as the Ethereum address
-        let mut address_bytes = [0u8; 20];
-        address_bytes.copy_from_slice(&hash[12..32]);
-        EvmAddress(address_bytes)
+        let address_bytes: &[u8; 20] = &hash[12..32].try_into().unwrap();
+
+        // address_bytes.copy_from_slice(&hash[12..32]);
+        EvmAddress(*address_bytes)
     }
 
     fn is_valid(bytes: &[u8]) -> bool {
@@ -193,4 +179,3 @@ mod tests {
         assert!(address.to_string().starts_with("0x"));
     }
 }
-
