@@ -74,5 +74,5 @@ pub mod evm;
 pub mod solana;
 
 pub use private_key::PrivateKey;
-pub use private_key_generator::{PrivateKeyGenerator, RngPrivateKeyGenerator, FillBytes};
+pub use private_key_generator::{PrivateKeyGenerator, RngPrivateKeyGenerator, SequentialPrivateKeyGenerator, FillBytes};
 pub use rng::{ThreadRngFillBytes, DevRandomRng};
