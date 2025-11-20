@@ -94,8 +94,8 @@ fn main() {
 
 fn generate_key(rng_type: RngType, quiet: bool) {
     if !quiet {
-        println!("EVM Account Generator");
-        println!("====================\n");
+    println!("EVM Account Generator");
+    println!("====================\n");
     }
 
     match rng_type {
@@ -177,6 +177,10 @@ fn search_vanity(
             .unwrap_or(1)
     });
 
+    // Calculate search space and expected attempts for 50% probability
+    let search_space = calculate_search_space(&prefix, &suffix);
+    let expected_attempts = (search_space as f64 * 0.693).ceil() as u64;
+    
     if !quiet {
         println!("Searching for vanity address...");
         if let Some(ref p) = prefix {
@@ -185,7 +189,9 @@ fn search_vanity(
         if let Some(ref s) = suffix {
             println!("  Suffix: {} ({} hex chars)", s, s.len());
         }
-        println!("  Threads: {}\n", num_threads);
+        println!("  Threads: {}", num_threads);
+        println!("  Expected attempts (50% probability): {}", format_number(expected_attempts));
+        println!();
     }
 
     let (result_tx, result_rx) = mpsc::channel();
@@ -292,9 +298,25 @@ fn search_vanity(
                 total_checked += interval_count;
                 let elapsed = last_report.elapsed();
                 let keys_per_sec = (interval_count as f64 / elapsed.as_secs_f64()) as u64;
-                print!("\r{} keys/sec | {} total checked", 
+                
+                // Calculate ETA for 50% probability
+                let remaining = if total_checked < expected_attempts {
+                    expected_attempts - total_checked
+                } else {
+                    0
+                };
+                
+                let eta_str = if keys_per_sec > 0 && remaining > 0 {
+                    let eta_secs = remaining / keys_per_sec;
+                    format_duration(eta_secs)
+                } else {
+                    "unlucky".to_string()
+                };
+                
+                print!("\r{} keys/sec | {} checked | ETA 50%: {}", 
                     format_number(keys_per_sec), 
-                    format_number(total_checked));
+                    format_number(total_checked),
+                    eta_str);
                 io::stdout().flush().ok();
                 last_report = Instant::now();
             }
@@ -370,6 +392,42 @@ fn is_matching(test: &[u8], pattern: &[u8], bitmask: &[u8]) -> bool {
         .zip(pattern.iter())
         .zip(bitmask.iter())
         .all(|((t, p), m)| (t & m) == (p & m))
+}
+
+fn calculate_search_space(prefix: &Option<String>, suffix: &Option<String>) -> u64 {
+    let mut space = 1u64;
+    
+    if let Some(p) = prefix {
+        // Each hex character represents 4 bits (16 possibilities)
+        // For odd-length patterns, the last character is wildcarded (already 16x larger)
+        let hex_chars = p.len();
+        space = space.saturating_mul(16u64.saturating_pow(hex_chars as u32));
+    }
+    
+    if let Some(s) = suffix {
+        let hex_chars = s.len();
+        space = space.saturating_mul(16u64.saturating_pow(hex_chars as u32));
+    }
+    
+    space
+}
+
+fn format_duration(seconds: u64) -> String {
+    if seconds < 60 {
+        format!("{}s", seconds)
+    } else if seconds < 3600 {
+        let mins = seconds / 60;
+        let secs = seconds % 60;
+        format!("{}m {}s", mins, secs)
+    } else if seconds < 86400 {
+        let hours = seconds / 3600;
+        let mins = (seconds % 3600) / 60;
+        format!("{}h {}m", hours, mins)
+    } else {
+        let days = seconds / 86400;
+        let hours = (seconds % 86400) / 3600;
+        format!("{}d {}h", days, hours)
+    }
 }
 
 fn format_number(n: u64) -> String {
