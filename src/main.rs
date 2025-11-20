@@ -17,6 +17,7 @@ use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc};
 use std::sync::mpsc;
 use std::thread;
 use std::time::{Duration, Instant};
+use sysinfo::System;
 
 #[derive(Parser)]
 #[command(name = "evm-account-generator")]
@@ -191,6 +192,10 @@ fn search_vanity(
         }
         println!("  Threads: {}", num_threads);
         println!("  Expected attempts (50% probability): {}", format_number(expected_attempts));
+        
+        // Display CPU information
+        display_cpu_info(num_threads);
+        
         println!();
     }
 
@@ -392,6 +397,39 @@ fn is_matching(test: &[u8], pattern: &[u8], bitmask: &[u8]) -> bool {
         .zip(pattern.iter())
         .zip(bitmask.iter())
         .all(|((t, p), m)| (t & m) == (p & m))
+}
+
+fn display_cpu_info(_threads_used: usize) {
+    let mut sys = System::new();
+    sys.refresh_cpu_all();
+    
+    // Get CPU information
+    let cpus = sys.cpus();
+    if let Some(cpu) = cpus.first() {
+        let cpu_name = cpu.brand().trim();
+        let frequency = cpu.frequency(); // MHz
+        
+        // Get architecture
+        let arch = std::env::consts::ARCH;
+        
+        // Get core counts
+        let physical_cores = System::physical_core_count().unwrap_or(0);
+        let logical_cores = cpus.len();
+        
+        println!();
+        println!("System Information:");
+        println!("  CPU: {} ({})", cpu_name, arch);
+        
+        if frequency > 0 {
+            println!("  Frequency: {:.2} GHz", frequency as f64 / 1000.0);
+        }
+        
+        if physical_cores > 0 {
+            println!("  Cores: {} physical, {} logical", physical_cores, logical_cores);
+        } else {
+            println!("  Cores: {} logical", logical_cores);
+        }
+    }
 }
 
 fn calculate_search_space(prefix: &Option<String>, suffix: &Option<String>) -> u64 {

@@ -23,8 +23,8 @@ hex = "0.4"
 keccak-asm = "0.1.4"
 rand = "0.8"
 secp256k1 = "0.29"
-ethers = "2.0.14"
 clap = { version = "4.5", features = ["derive"] }
+sysinfo = "0.37"
 
 [dev-dependencies]
 # Add any test-specific dependencies here
