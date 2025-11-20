@@ -12,6 +12,7 @@ use evm_account_generator::{
     PrivateKey,
     evm::PrivateKey as EvmKey,
 };
+use std::io::{self, BufRead, IsTerminal};
 
 #[derive(Parser)]
 #[command(name = "evm-account-generator")]
@@ -34,8 +35,15 @@ enum Mode {
         #[arg(short, long, default_value_t = false)]
         quiet: bool,
     },
-    /// Derive address from an existing private key (TODO)
-    Derive,
+    /// Derive address from an existing private key
+    Derive {
+        /// Private key (0x-prefixed hex string). If not provided, reads from stdin
+        private_key: Option<String>,
+        
+        /// Suppress extra output, show only address
+        #[arg(short, long, default_value_t = false)]
+        quiet: bool,
+    },
     /// Search for vanity addresses (TODO)
     Vanity,
 }
@@ -55,10 +63,8 @@ fn main() {
         Mode::Generate { rng, quiet } => {
             generate_key(rng, quiet);
         }
-        Mode::Derive => {
-            println!("Derive mode is not yet implemented.");
-            println!("This mode will allow you to derive an address from an existing private key.");
-            std::process::exit(1);
+        Mode::Derive { private_key, quiet } => {
+            derive_address(private_key, quiet);
         }
         Mode::Vanity => {
             println!("Vanity mode is not yet implemented.");
@@ -126,6 +132,68 @@ fn generate_key(rng_type: RngType, quiet: bool) {
         println!("   Never share your private key with anyone!");
         println!("   Anyone with your private key has full control of your account.");
         println!("   Store it securely and never expose it in logs or version control.");
+    }
+}
+
+fn derive_address(private_key_opt: Option<String>, quiet: bool) {
+    if !quiet {
+        println!("EVM Address Derivation");
+        println!("======================\n");
+    }
+    
+    // Get the private key from argument or stdin
+    let private_key_str = match private_key_opt {
+        Some(key) => key,
+        None => {
+            // Read from stdin
+            let stdin = io::stdin();
+            
+            // Show prompt if stdin is a terminal (interactive mode)
+            if stdin.is_terminal() {
+                eprint!("Enter private key: ");
+                // Flush stderr to ensure prompt is displayed immediately
+                use std::io::Write;
+                let _ = io::stderr().flush();
+            }
+            
+            let mut line = String::new();
+            match stdin.lock().read_line(&mut line) {
+                Ok(_) => line.trim().to_string(),
+                Err(e) => {
+                    eprintln!("Error reading from stdin: {}", e);
+                    std::process::exit(1);
+                }
+            }
+        }
+    };
+    
+    // Parse the private key
+    let private_key = match EvmKey::from_string(&private_key_str) {
+        Some(key) => key,
+        None => {
+            eprintln!("Error: Invalid private key format");
+            eprintln!("\nExpected format: 0x-prefixed 64-character hex string");
+            eprintln!("Example: 0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef");
+            std::process::exit(1);
+        }
+    };
+    
+    // Derive the address
+    let address = private_key.derive_address();
+    
+    if quiet {
+        // Quiet mode: only show address
+        println!("{}", address);
+    } else {
+        // Normal mode: show full details
+        println!("✓ Successfully derived address!\n");
+        println!("Private Key: {}", private_key.to_string());
+        println!("Address:     {}\n", address);
+        
+        println!("Address Details:");
+        println!("  Format:  0x-prefixed hexadecimal");
+        println!("  Length:  20 bytes (40 hex characters)");
+        println!("  Curve:   secp256k1");
     }
 }
 
