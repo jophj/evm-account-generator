@@ -183,6 +183,9 @@ fn search_vanity(
     let expected_attempts = (search_space as f64 * 0.693).ceil() as u64;
     
     if !quiet {
+        display_cpu_info(num_threads);
+        println!();
+
         println!("Searching for vanity address...");
         if let Some(ref p) = prefix {
             println!("  Prefix: {} ({} hex chars)", p, p.len());
@@ -192,9 +195,6 @@ fn search_vanity(
         }
         println!("  Threads: {}", num_threads);
         println!("  Expected attempts (50% probability): {}", format_number(expected_attempts));
-        
-        // Display CPU information
-        display_cpu_info(num_threads);
         
         println!();
     }
