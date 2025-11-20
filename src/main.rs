@@ -12,7 +12,11 @@ use evm_account_generator::{
     PrivateKey,
     evm::PrivateKey as EvmKey,
 };
-use std::io::{self, BufRead, IsTerminal};
+use std::io::{self, BufRead, IsTerminal, Write};
+use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc};
+use std::sync::mpsc;
+use std::thread;
+use std::time::{Duration, Instant};
 
 #[derive(Parser)]
 #[command(name = "evm-account-generator")]
@@ -44,8 +48,24 @@ enum Mode {
         #[arg(short, long, default_value_t = false)]
         quiet: bool,
     },
-    /// Search for vanity addresses (TODO)
-    Vanity,
+    /// Search for vanity addresses with custom prefix/suffix
+    Vanity {
+        /// Address prefix to match (hex, without 0x)
+        #[arg(long)]
+        prefix: Option<String>,
+        
+        /// Address suffix to match (hex, without 0x)
+        #[arg(long)]
+        suffix: Option<String>,
+        
+        /// Number of threads to use (default: CPU count)
+        #[arg(long)]
+        threads: Option<usize>,
+        
+        /// Suppress progress output, show only result
+        #[arg(short, long, default_value_t = false)]
+        quiet: bool,
+    },
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
@@ -66,10 +86,8 @@ fn main() {
         Mode::Derive { private_key, quiet } => {
             derive_address(private_key, quiet);
         }
-        Mode::Vanity => {
-            println!("Vanity mode is not yet implemented.");
-            println!("This mode will allow you to search for vanity addresses.");
-            std::process::exit(1);
+        Mode::Vanity { prefix, suffix, threads, quiet } => {
+            search_vanity(prefix, suffix, threads, quiet);
         }
     }
 }
@@ -133,6 +151,242 @@ fn generate_key(rng_type: RngType, quiet: bool) {
         println!("   Anyone with your private key has full control of your account.");
         println!("   Store it securely and never expose it in logs or version control.");
     }
+}
+
+fn search_vanity(
+    prefix: Option<String>,
+    suffix: Option<String>,
+    threads: Option<usize>,
+    quiet: bool,
+) {
+    // Validate that at least one pattern is provided
+    if prefix.is_none() && suffix.is_none() {
+        eprintln!("Error: Must specify at least --prefix or --suffix");
+        eprintln!("Example: evm-account-generator vanity --prefix dead");
+        std::process::exit(1);
+    }
+
+    // Parse and validate hex patterns to (bytes, mask) tuples
+    let prefix_pattern = prefix.as_ref().map(|p| parse_hex_pattern(p, true));
+    let suffix_pattern = suffix.as_ref().map(|s| parse_hex_pattern(s, false));
+
+    // Determine number of threads
+    let num_threads = threads.unwrap_or_else(|| {
+        thread::available_parallelism()
+            .map(|n| n.get())
+            .unwrap_or(1)
+    });
+
+    if !quiet {
+        println!("Searching for vanity address...");
+        if let Some(ref p) = prefix {
+            println!("  Prefix: {} ({} hex chars)", p, p.len());
+        }
+        if let Some(ref s) = suffix {
+            println!("  Suffix: {} ({} hex chars)", s, s.len());
+        }
+        println!("  Threads: {}\n", num_threads);
+    }
+
+    let (result_tx, result_rx) = mpsc::channel();
+    let (stats_tx, stats_rx) = mpsc::channel();
+    let found = Arc::new(AtomicBool::new(false));
+    let mut report_senders = vec![];
+
+    // Spawn worker threads
+    let start_time = Instant::now();
+    let mut handles = vec![];
+    
+    for thread_id in 0..num_threads {
+        let result_tx = result_tx.clone();
+        let stats_tx = stats_tx.clone();
+        let found = Arc::clone(&found);
+        let prefix_pattern = prefix_pattern.clone();
+        let suffix_pattern = suffix_pattern.clone();
+        
+        let (report_tx, report_rx) = mpsc::channel();
+        report_senders.push(report_tx);
+        
+        let handle = thread::spawn(move || {
+            let mut generator = RngPrivateKeyGenerator::new(ThreadRngFillBytes::new());
+            let mut count = 0u64;
+            
+            loop {
+                if found.load(Ordering::Relaxed) {
+                    return;
+                }
+                
+                let private_key: EvmKey = generator.generate();
+                let address = private_key.derive_address();
+                let addr_bytes = address.as_bytes();
+                
+                // Check prefix match using byte-level comparison
+                let prefix_match = prefix_pattern.as_ref().map_or(true, |(pattern, mask)| {
+                    is_matching(&addr_bytes[..pattern.len()], pattern, mask)
+                });
+                
+                // Check suffix match using byte-level comparison
+                let suffix_match = suffix_pattern.as_ref().map_or(true, |(pattern, mask)| {
+                    let start = addr_bytes.len() - pattern.len();
+                    is_matching(&addr_bytes[start..], pattern, mask)
+                });
+                
+                if prefix_match && suffix_match {
+                    found.store(true, Ordering::Relaxed);
+                    result_tx.send((private_key, thread_id, count)).unwrap();
+                    return;
+                }
+                
+                count += 1;
+                
+                // Check for report request
+                if let Ok(_) = report_rx.try_recv() {
+                    stats_tx.send(count).ok();
+                    count = 0;
+                }
+            }
+        });
+        
+        handles.push(handle);
+    }
+
+    drop(result_tx);
+    drop(stats_tx);
+
+    // Progress reporting loop
+    let mut last_report = Instant::now();
+    let mut total_checked = 0u64;
+    
+    loop {
+        // Check if we found a result
+        if let Ok((private_key, thread_id, final_count)) = result_rx.try_recv() {
+            let elapsed = start_time.elapsed();
+            total_checked += final_count;
+            
+            if !quiet {
+                println!("\n✓ Found by thread {}!", thread_id);
+                println!("Time elapsed: {:.1} seconds", elapsed.as_secs_f64());
+                println!("Keys checked: {}\n", format_number(total_checked));
+                println!("Private Key: {}", private_key.to_string());
+                println!("Address:     {}", private_key.derive_address());
+            } else {
+                println!("{}", private_key.to_string());
+            }
+            break;
+        }
+
+        // Send report requests
+        if !quiet && last_report.elapsed() >= Duration::from_millis(500) {
+            for sender in &report_senders {
+                sender.send(()).ok();
+            }
+
+            thread::sleep(Duration::from_millis(50));
+
+            let mut interval_count = 0u64;
+            while let Ok(count) = stats_rx.try_recv() {
+                interval_count += count;
+            }
+
+            if interval_count > 0 {
+                total_checked += interval_count;
+                let elapsed = last_report.elapsed();
+                let keys_per_sec = (interval_count as f64 / elapsed.as_secs_f64()) as u64;
+                print!("\r{} keys/sec | {} total checked", 
+                    format_number(keys_per_sec), 
+                    format_number(total_checked));
+                io::stdout().flush().ok();
+                last_report = Instant::now();
+            }
+        } else if !quiet {
+            thread::sleep(Duration::from_millis(100));
+        }
+    }
+
+    // Wait for all threads to finish
+    for handle in handles {
+        handle.join().ok();
+    }
+}
+
+fn parse_hex_pattern(pattern: &str, is_prefix: bool) -> (Vec<u8>, Vec<u8>) {
+    // Remove 0x prefix if present
+    let clean = pattern.strip_prefix("0x").unwrap_or(pattern);
+    
+    // Validate hex characters
+    if !clean.chars().all(|c| c.is_ascii_hexdigit()) {
+        eprintln!("Error: Invalid hex pattern: {}", pattern);
+        eprintln!("Pattern must contain only hex characters (0-9, a-f, A-F)");
+        std::process::exit(1);
+    }
+    
+    let is_odd_length = clean.len() % 2 == 1;
+    
+    // Pad with 0 if odd length
+    // For prefix: pad at the end (e.g., "69420" -> "694200", mask FFFFF0)
+    // For suffix: pad at the beginning (e.g., "69420" -> "069420", mask 0FFFFF)
+    let padded = if is_odd_length {
+        if is_prefix {
+            format!("{}0", clean)
+        } else {
+            format!("0{}", clean)
+        }
+    } else {
+        clean.to_string()
+    };
+    
+    // Convert hex string to bytes
+    let bytes: Vec<u8> = (0..padded.len())
+        .step_by(2)
+        .map(|i| u8::from_str_radix(&padded[i..i+2], 16).unwrap())
+        .collect();
+    
+    // Generate bitmask
+    let mut mask = vec![0xFF; bytes.len()];
+    if is_odd_length {
+        if is_prefix {
+            // For prefix with odd length: mask last byte's upper nibble only (0xF0)
+            // e.g., "69420" -> bytes=[0x69, 0x42, 0x00], mask=[0xFF, 0xFF, 0xF0]
+            *mask.last_mut().unwrap() = 0xF0;
+        } else {
+            // For suffix with odd length: mask first byte's lower nibble only (0x0F)
+            // e.g., "69420" -> bytes=[0x06, 0x94, 0x20], mask=[0x0F, 0xFF, 0xFF]
+            mask[0] = 0x0F;
+        }
+    }
+    
+    (bytes, mask)
+}
+
+/// Checks if bits in `test` match bits in `pattern` where `bitmask` has 1s.
+fn is_matching(test: &[u8], pattern: &[u8], bitmask: &[u8]) -> bool {
+    // All arrays should have the same length
+    if test.len() != pattern.len() || test.len() != bitmask.len() {
+        return false;
+    }
+    
+    // Check if masked bits match for each byte
+    test.iter()
+        .zip(pattern.iter())
+        .zip(bitmask.iter())
+        .all(|((t, p), m)| (t & m) == (p & m))
+}
+
+fn format_number(n: u64) -> String {
+    let s = n.to_string();
+    let mut result = String::new();
+    let mut count = 0;
+    
+    for c in s.chars().rev() {
+        if count == 3 {
+            result.push(',');
+            count = 0;
+        }
+        result.push(c);
+        count += 1;
+    }
+    
+    result.chars().rev().collect()
 }
 
 fn derive_address(private_key_opt: Option<String>, quiet: bool) {
