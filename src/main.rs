@@ -94,19 +94,10 @@ fn main() {
 }
 
 fn generate_key(rng_type: RngType, quiet: bool) {
-    if !quiet {
-    println!("EVM Account Generator");
-    println!("====================\n");
-    }
-
     match rng_type {
         RngType::ThreadRng => {
             if !quiet {
-                println!("Using: ThreadRng (thread-local RNG)");
-                println!("  - Cross-platform compatible");
-                println!("  - Cryptographically secure (ChaCha20)");
-                println!("  - Non-blocking\n");
-                println!("Generating private key...");
+                println!("Using: ThreadRng (ChaCha20)");
             }
 
             let thread_rng = ThreadRngFillBytes::new();
@@ -126,11 +117,7 @@ fn generate_key(rng_type: RngType, quiet: bool) {
             #[cfg(target_family = "unix")]
             {
                 if !quiet {
-                    println!("Using: /dev/random (kernel entropy pool)");
-                    println!("  - Maximum entropy source");
-                    println!("  - Unix/Linux/macOS only");
-                    println!("  - May block if entropy is low\n");
-                    println!("Opening /dev/random...");
+                    println!("Using: /dev/random (may block if entropy is low)");
                 }
 
                 let rng = DevRandomRng::new();
@@ -144,13 +131,6 @@ fn generate_key(rng_type: RngType, quiet: bool) {
                 display_key_info(&private_key, quiet);
             }
         }
-    }
-
-    if !quiet {
-        println!("\n⚠️  SECURITY WARNING:");
-        println!("   Never share your private key with anyone!");
-        println!("   Anyone with your private key has full control of your account.");
-        println!("   Store it securely and never expose it in logs or version control.");
     }
 }
 
@@ -486,11 +466,6 @@ fn format_number(n: u64) -> String {
 }
 
 fn derive_address(private_key_opt: Option<String>, quiet: bool) {
-    if !quiet {
-        println!("EVM Address Derivation");
-        println!("======================\n");
-    }
-    
     // Get the private key from argument or stdin
     let private_key_str = match private_key_opt {
         Some(key) => key,
@@ -536,14 +511,8 @@ fn derive_address(private_key_opt: Option<String>, quiet: bool) {
         println!("{}", address);
     } else {
         // Normal mode: show full details
-        println!("✓ Successfully derived address!\n");
         println!("Private Key: {}", private_key.to_string());
         println!("Address:     {}\n", address);
-        
-        println!("Address Details:");
-        println!("  Format:  0x-prefixed hexadecimal");
-        println!("  Length:  20 bytes (40 hex characters)");
-        println!("  Curve:   secp256k1");
     }
 }
 
@@ -556,10 +525,5 @@ fn display_key_info(private_key: &EvmKey, quiet: bool) {
         println!("\n✓ Successfully generated EVM account!\n");
         println!("Private Key: {}", private_key.to_string());
         println!("Address:     {}\n", private_key.derive_address());
-        
-        println!("Key Details:");
-        println!("  Length:  {} bytes", private_key.as_bytes().len());
-        println!("  Format:  0x-prefixed hexadecimal");
-        println!("  Curve:   secp256k1");
     }
 }
