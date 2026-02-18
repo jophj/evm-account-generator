@@ -33,8 +33,8 @@ struct Cli {
 enum Mode {
     /// Generate a new random private key
     Generate {
-        /// Blockchain to generate a key for
-        #[arg(short, long, value_enum, default_value_t = ChainType::Evm)]
+        /// Blockchain type
+        #[arg(short = 't', long = "type", value_enum, default_value_t = ChainType::Evm)]
         chain: ChainType,
 
         /// Random number generator to use
@@ -47,8 +47,8 @@ enum Mode {
     },
     /// Derive address from an existing private key
     Derive {
-        /// Blockchain to derive the address for
-        #[arg(short, long, value_enum, default_value_t = ChainType::Evm)]
+        /// Blockchain type
+        #[arg(short = 't', long = "type", value_enum, default_value_t = ChainType::Evm)]
         chain: ChainType,
 
         /// Private key (hex for EVM, base58 keypair for Solana). Reads from stdin if omitted
@@ -60,8 +60,8 @@ enum Mode {
     },
     /// Search for vanity addresses with custom prefix/suffix
     Vanity {
-        /// Blockchain to search on
-        #[arg(short, long, value_enum, default_value_t = ChainType::Evm)]
+        /// Blockchain type
+        #[arg(short = 't', long = "type", value_enum, default_value_t = ChainType::Evm)]
         chain: ChainType,
 
         /// Address prefix to match (hex for EVM, base58 for Solana)

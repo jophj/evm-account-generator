@@ -24,13 +24,13 @@ cargo build --release
 evm-account-generator generate
 
 # Solana
-evm-account-generator generate --chain solana
+evm-account-generator generate --type solana
 
 # With /dev/random entropy (Unix only)
-evm-account-generator generate --chain evm --rng dev-random
+evm-account-generator generate --type evm --rng dev-random
 
 # Quiet mode (key only, no extra output)
-evm-account-generator generate --chain solana -q
+evm-account-generator generate --type solana -q
 ```
 
 ### Derive an address from a private key
@@ -40,7 +40,7 @@ evm-account-generator generate --chain solana -q
 evm-account-generator derive 0x1234...abcdef
 
 # Solana (base58 keypair)
-evm-account-generator derive --chain solana <base58-keypair>
+evm-account-generator derive --type solana <base58-keypair>
 
 # Read from stdin
 echo "0x1234...abcdef" | evm-account-generator derive
@@ -55,8 +55,8 @@ evm-account-generator vanity --suffix beef
 evm-account-generator vanity --prefix dead --suffix beef --threads 8
 
 # Solana: base58 prefix/suffix
-evm-account-generator vanity --chain solana --prefix jop
-evm-account-generator vanity --chain solana --suffix xyz
+evm-account-generator vanity --type solana --prefix jop
+evm-account-generator vanity --type solana --suffix xyz
 ```
 
 ## Library Usage
