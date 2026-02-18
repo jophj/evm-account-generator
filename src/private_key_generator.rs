@@ -12,7 +12,7 @@
 //!
 //! # Key Features
 //!
-//! - **Flexible Key Sizes**: Automatically generates the correct number of bytes (32 for EVM, 64 for Solana)
+//! - **Flexible Key Sizes**: Automatically generates the correct number of bytes per blockchain
 //! - **Type Safety**: Compile-time guarantees using Rust's type system
 //! - **Automatic Validation**: Retries generation if invalid keys are produced
 //!
@@ -44,8 +44,8 @@
 //! let mut generator = RngPrivateKeyGenerator::new(ThreadRngFillBytes::new());
 //!
 //! // Generate keys for different blockchains with different sizes
-//! let evm_key: EvmKey = generator.generate();         // 32 bytes
-//! let solana_key: SolanaKey = generator.generate();   // 64 bytes
+//! let evm_key: EvmKey = generator.generate();         // 32-byte secp256k1 key
+//! let solana_key: SolanaKey = generator.generate();   // 32-byte Ed25519 seed
 //!
 //! println!("EVM Key: {}", evm_key.to_string());
 //! println!("Solana Key: {}", solana_key.to_string());
@@ -271,20 +271,15 @@ mod tests {
         use crate::solana::PrivateKey as SolanaKey;
         
         let mock_rng = MockRng::new(vec![
-            vec![0u8; 64],  // Invalid: all zeros
-            vec![5u8; 64],  // Valid - 64 bytes for Solana
+            vec![0u8; 32],  // Invalid: all zeros
+            vec![5u8; 32],  // Valid - 32 bytes for Solana
         ]);
         
         let mut generator: RngPrivateKeyGenerator<MockRng> = RngPrivateKeyGenerator::new(mock_rng);
         let private_key: SolanaKey = generator.generate();
         
-        // Should skip the all-zeros and generate the valid key (64 bytes = 128 hex chars)
-        let expected = format!(
-            "0x{}",
-            "05".repeat(64)
-        );
-        assert_eq!(private_key.to_string(), expected);
-        assert_eq!(private_key.to_string().len(), 130); // 0x + 128 hex chars
+        // Should skip the all-zeros and generate the valid key
+        assert_eq!(private_key.as_bytes(), &[5u8; 32]);
     }
 
     #[test]
@@ -307,24 +302,21 @@ mod tests {
     }
 
     #[test]
-    fn test_generator_with_different_sizes() {
+    fn test_generator_with_different_chains() {
         use crate::solana::PrivateKey as SolanaKey;
         
-        // Test that the same generator can handle different key sizes
         let mock_rng = MockRng::new(vec![
             vec![10u8; 32],  // For EVM (32 bytes)
-            vec![20u8; 64],  // For Solana (64 bytes)
+            vec![20u8; 32],  // For Solana (32 bytes)
         ]);
         
         let mut generator = RngPrivateKeyGenerator::new(mock_rng);
         
-        // Generate 32-byte EVM key
         let evm_key: EvmKey = generator.generate();
         assert_eq!(evm_key.as_bytes().len(), 32);
         
-        // Generate 64-byte Solana key with same generator
         let sol_key: SolanaKey = generator.generate();
-        assert_eq!(sol_key.as_bytes().len(), 64);
+        assert_eq!(sol_key.as_bytes().len(), 32);
     }
 
     #[test]
@@ -333,30 +325,28 @@ mod tests {
         
         let mock_rng = MockRng::new(vec![
             vec![11u8; 32],  // EVM key
-            vec![22u8; 64],  // Solana key
+            vec![22u8; 32],  // Solana key
         ]);
         
         let mut generator = RngPrivateKeyGenerator::new(mock_rng);
         
-        // Test EVM address generation
         let evm_key: EvmKey = generator.generate();
         let evm_addr = evm_key.derive_address();
         assert!(evm_addr.to_string().starts_with("0x"));
-        assert_eq!(evm_addr.to_string().len(), 42); // 0x + 40 hex chars
+        assert_eq!(evm_addr.to_string().len(), 42);
         
-        // Test Solana address generation
         let sol_key: SolanaKey = generator.generate();
         let sol_addr = sol_key.derive_address();
-        assert!(sol_addr.to_string().starts_with("Sol"));
+        let addr_str = sol_addr.to_string();
+        assert!(addr_str.len() >= 32 && addr_str.len() <= 44);
     }
 
     #[test]
     fn test_key_size_detection() {
-        // Verify that key_size() returns correct values
         assert_eq!(EvmKey::key_size(), 32);
         
         use crate::solana::PrivateKey as SolanaKey;
-        assert_eq!(SolanaKey::key_size(), 64);
+        assert_eq!(SolanaKey::key_size(), 32);
     }
 
     #[test]
@@ -410,9 +400,9 @@ mod tests {
         use crate::solana::PrivateKey as SolanaKey;
         
         let mock_rng = MockRng::new(vec![
-            vec![0x11; 64],
-            vec![0x22; 64],
-            vec![0x33; 64],
+            vec![0x11; 32],
+            vec![0x22; 32],
+            vec![0x33; 32],
         ]);
         
         let mut generator = RngPrivateKeyGenerator::new(mock_rng);
@@ -421,15 +411,13 @@ mod tests {
         let key2: SolanaKey = generator.generate();
         let key3: SolanaKey = generator.generate();
         
-        // All keys should be different
         assert_ne!(key1.to_string(), key2.to_string());
         assert_ne!(key2.to_string(), key3.to_string());
         assert_ne!(key1.to_string(), key3.to_string());
         
-        // All should be 64 bytes
-        assert_eq!(key1.as_bytes().len(), 64);
-        assert_eq!(key2.as_bytes().len(), 64);
-        assert_eq!(key3.as_bytes().len(), 64);
+        assert_eq!(key1.as_bytes().len(), 32);
+        assert_eq!(key2.as_bytes().len(), 32);
+        assert_eq!(key3.as_bytes().len(), 32);
     }
 
     #[test]
@@ -438,26 +426,23 @@ mod tests {
         
         let mock_rng = MockRng::new(vec![
             vec![0x10; 32],  // EVM
-            vec![0x20; 64],  // Solana
+            vec![0x20; 32],  // Solana
             vec![0x30; 32],  // EVM
-            vec![0x40; 64],  // Solana
+            vec![0x40; 32],  // Solana
         ]);
         
         let mut generator = RngPrivateKeyGenerator::new(mock_rng);
         
-        // Alternate between blockchain types
         let evm1: EvmKey = generator.generate();
         let sol1: SolanaKey = generator.generate();
         let evm2: EvmKey = generator.generate();
         let sol2: SolanaKey = generator.generate();
         
-        // Verify correct sizes
         assert_eq!(evm1.as_bytes().len(), 32);
-        assert_eq!(sol1.as_bytes().len(), 64);
+        assert_eq!(sol1.as_bytes().len(), 32);
         assert_eq!(evm2.as_bytes().len(), 32);
-        assert_eq!(sol2.as_bytes().len(), 64);
+        assert_eq!(sol2.as_bytes().len(), 32);
         
-        // Verify all keys are unique
         assert_ne!(evm1.to_string(), evm2.to_string());
         assert_ne!(sol1.to_string(), sol2.to_string());
     }
@@ -485,36 +470,30 @@ mod tests {
     fn test_thread_rng_with_multiple_blockchains() {
         use crate::solana::PrivateKey as SolanaKey;
         
-        // Test that ThreadRngFillBytes works with different blockchain types
         let mut generator = RngPrivateKeyGenerator::new(ThreadRngFillBytes::new());
         
-        // Generate EVM keys (32 bytes each)
         let evm_key1: EvmKey = generator.generate();
         let evm_key2: EvmKey = generator.generate();
-        
-        // Generate Solana keys with the same generator (64 bytes each)
         let sol_key1: SolanaKey = generator.generate();
         let sol_key2: SolanaKey = generator.generate();
         
-        // All keys should be valid and different
         assert_ne!(evm_key1.to_string(), evm_key2.to_string());
         assert_ne!(sol_key1.to_string(), sol_key2.to_string());
         
-        // Verify EVM keys are 32 bytes (64 hex chars + 0x prefix = 66 chars)
+        // EVM: 0x + 64 hex chars = 66
         assert_eq!(evm_key1.to_string().len(), 66);
         assert_eq!(evm_key2.to_string().len(), 66);
         
-        // Verify Solana keys are 64 bytes (128 hex chars + 0x prefix = 130 chars)
-        assert_eq!(sol_key1.to_string().len(), 130);
-        assert_eq!(sol_key2.to_string().len(), 130);
+        // Solana: base58 of 64-byte keypair
+        assert!(sol_key1.to_string().len() > 40);
+        assert!(sol_key2.to_string().len() > 40);
         
-        // EVM keys should generate valid addresses
         let evm_addr = evm_key1.derive_address();
         assert!(evm_addr.to_string().starts_with("0x"));
         
-        // Solana keys should generate valid addresses
         let sol_addr = sol_key1.derive_address();
-        assert!(sol_addr.to_string().starts_with("Sol"));
+        let addr_str = sol_addr.to_string();
+        assert!(addr_str.len() >= 32 && addr_str.len() <= 44);
     }
 
     // Tests for SequentialPrivateKeyGenerator
@@ -580,19 +559,19 @@ mod tests {
     fn test_sequential_generator_solana() {
         use crate::solana::PrivateKey as SolanaKey;
         
-        // Test sequential generation with Solana keys (64 bytes)
-        let seed_hex = format!("0x{}", "00".repeat(63) + "01");
+        let seed_hex = format!("0x{}", "00".repeat(31) + "01");
         let seed = SolanaKey::from_string(&seed_hex).unwrap();
         let mut generator = SequentialPrivateKeyGenerator::new(seed);
         
         let key1 = generator.generate();
         let key2 = generator.generate();
         
-        let expected1 = format!("0x{}", "00".repeat(63) + "02");
-        let expected2 = format!("0x{}", "00".repeat(63) + "03");
-        
-        assert_eq!(key1.to_string(), expected1);
-        assert_eq!(key2.to_string(), expected2);
+        assert_eq!(key1.as_bytes(), &{
+            let mut b = [0u8; 32]; b[31] = 2; b
+        });
+        assert_eq!(key2.as_bytes(), &{
+            let mut b = [0u8; 32]; b[31] = 3; b
+        });
     }
 
     #[test]
@@ -639,27 +618,23 @@ mod tests {
     fn test_sequential_generator_overflow_wraps_to_one() {
         use crate::solana::PrivateKey as SolanaKey;
         
-        // Test with Solana key that will overflow (all FF bytes)
-        let seed_hex = format!("0x{}", "FF".repeat(64));
+        let seed_hex = format!("0x{}", "FF".repeat(32));
         let seed = SolanaKey::from_string(&seed_hex).unwrap();
         let mut generator = SequentialPrivateKeyGenerator::new(seed);
         
-        // Should wrap to 1, not 0 (since 0 is invalid)
         let key = generator.generate();
         
-        // The key should be valid and not all zeros
         assert!(SolanaKey::is_valid(key.as_bytes()));
         
-        // Verify it's 1
-        let expected = format!("0x{}", "00".repeat(63) + "01");
-        assert_eq!(key.to_string(), expected);
+        let mut expected = [0u8; 32];
+        expected[31] = 1;
+        assert_eq!(key.as_bytes(), &expected);
     }
 
     #[test]
     fn test_sequential_generator_produces_valid_addresses() {
         use crate::solana::PrivateKey as SolanaKey;
         
-        // Test that generated keys can derive valid addresses
         let evm_seed = EvmKey::from_string("0x0000000000000000000000000000000000000000000000000000000000000042").unwrap();
         let mut evm_gen = SequentialPrivateKeyGenerator::new(evm_seed);
         
@@ -668,13 +643,13 @@ mod tests {
         assert!(evm_addr.to_string().starts_with("0x"));
         assert_eq!(evm_addr.to_string().len(), 42);
         
-        // Test Solana
-        let sol_seed_hex = format!("0x{}", "00".repeat(63) + "42");
+        let sol_seed_hex = format!("0x{}", "00".repeat(31) + "42");
         let sol_seed = SolanaKey::from_string(&sol_seed_hex).unwrap();
         let mut sol_gen = SequentialPrivateKeyGenerator::new(sol_seed);
         
         let sol_key = sol_gen.generate();
         let sol_addr = sol_key.derive_address();
-        assert!(sol_addr.to_string().starts_with("Sol"));
+        let addr_str = sol_addr.to_string();
+        assert!(addr_str.len() >= 32 && addr_str.len() <= 44);
     }
 }

@@ -1,18 +1,14 @@
 //! Solana blockchain support
 //!
 //! This module provides private key generation and address derivation for
-//! the Solana blockchain using Ed25519 keypairs.
+//! the Solana blockchain using Ed25519 signing keys (`ed25519-dalek`).
 //!
 //! # Key Features
 //!
-//! - 64-byte Ed25519 keypairs (seed + derived key)
-//! - Simplified validation (non-zero check)
-//! - Base58-style address formatting (simplified)
-//!
-//! # Note
-//!
-//! This is a simplified implementation for demonstration purposes.
-//! Production Solana applications should use the official `solana-sdk` crate.
+//! - 32-byte Ed25519 signing keys (seeds)
+//! - Proper Ed25519 public key derivation via `ed25519-dalek`
+//! - Base58-encoded addresses matching the standard Solana format
+//! - Import/export compatible with wallets like Phantom (base58 64-byte keypair)
 //!
 //! # Examples
 //!
