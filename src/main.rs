@@ -6,11 +6,13 @@
 use clap::{Parser, Subcommand, ValueEnum};
 use evm_account_generator::{
     DevRandomRng,
+    EvmIncrementalGenerator,
     RngPrivateKeyGenerator,
     PrivateKeyGenerator,
     ThreadRngFillBytes,
     PrivateKey,
     evm::PrivateKey as EvmKey,
+    evm::Address as EvmAddress,
     solana::PrivateKey as SolanaKey,
 };
 use std::io::{self, BufRead, IsTerminal, Write};
@@ -76,6 +78,10 @@ enum Mode {
         #[arg(long)]
         threads: Option<usize>,
 
+        /// Random number generator to use
+        #[arg(short, long, value_enum, default_value_t = RngType::ThreadRng)]
+        rng: RngType,
+
         /// Suppress progress output, show only result
         #[arg(short, long, default_value_t = false)]
         quiet: bool,
@@ -88,6 +94,8 @@ enum RngType {
     ThreadRng,
     /// Use /dev/random (Unix only, highest entropy quality)
     DevRandom,
+    /// Use incremental EC point addition (EVM only, fastest for vanity search)
+    Incremental,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
@@ -108,8 +116,8 @@ fn main() {
         Mode::Derive { chain, private_key, quiet } => {
             derive_address(chain, private_key, quiet);
         }
-        Mode::Vanity { chain, prefix, suffix, threads, quiet } => {
-            search_vanity(chain, prefix, suffix, threads, quiet);
+        Mode::Vanity { chain, prefix, suffix, threads, rng, quiet } => {
+            search_vanity(chain, prefix, suffix, threads, rng, quiet);
         }
     }
 }
@@ -165,6 +173,23 @@ fn generate_key(chain: ChainType, rng_type: RngType, quiet: bool) {
                         let key: SolanaKey = generator.generate();
                         display_solana_key(&key, quiet);
                     }
+                }
+            }
+        }
+        RngType::Incremental => {
+            match chain {
+                ChainType::Evm => {
+                    if !quiet {
+                        println!("Using: Incremental (secp256k1 point addition)");
+                    }
+                    let mut generator = EvmIncrementalGenerator::new();
+                    let (key, _) = generator.generate();
+                    display_evm_key(&key, quiet);
+                }
+                ChainType::Solana => {
+                    eprintln!("Error: --rng incremental is only supported for EVM (secp256k1)");
+                    eprintln!("Use --rng thread-rng or --rng dev-random for Solana");
+                    std::process::exit(1);
                 }
             }
         }
@@ -242,6 +267,7 @@ fn search_vanity(
     prefix: Option<String>,
     suffix: Option<String>,
     threads: Option<usize>,
+    rng_type: RngType,
     quiet: bool,
 ) {
     if prefix.is_none() && suffix.is_none() {
@@ -250,9 +276,22 @@ fn search_vanity(
         std::process::exit(1);
     }
 
+    #[cfg(not(target_family = "unix"))]
+    if rng_type == RngType::DevRandom {
+        eprintln!("Error: /dev/random is only available on Unix-like systems");
+        eprintln!("Please use --rng thread-rng instead");
+        std::process::exit(1);
+    }
+
+    if rng_type == RngType::Incremental && chain == ChainType::Solana {
+        eprintln!("Error: --rng incremental is only supported for EVM (secp256k1)");
+        eprintln!("Use --rng thread-rng or --rng dev-random for Solana");
+        std::process::exit(1);
+    }
+
     match chain {
-        ChainType::Evm => search_vanity_evm(prefix, suffix, threads, quiet),
-        ChainType::Solana => search_vanity_solana(prefix, suffix, threads, quiet),
+        ChainType::Evm => search_vanity_evm(prefix, suffix, threads, rng_type, quiet),
+        ChainType::Solana => search_vanity_solana(prefix, suffix, threads, rng_type, quiet),
     }
 }
 
@@ -264,6 +303,7 @@ fn search_vanity_evm(
     prefix: Option<String>,
     suffix: Option<String>,
     threads: Option<usize>,
+    rng_type: RngType,
     quiet: bool,
 ) {
     let prefix_pattern = prefix.as_ref().map(|p| parse_hex_pattern(p, true));
@@ -287,6 +327,7 @@ fn search_vanity_evm(
             println!("  Suffix: {} ({} hex chars)", s, s.len());
         }
         println!("  Threads: {}", num_threads);
+        println!("  RNG: {}", rng_display_name(rng_type));
         println!("  Expected attempts (50% probability): {}", format_number(expected_attempts));
         println!();
     }
@@ -310,7 +351,28 @@ fn search_vanity_evm(
         report_senders.push(report_tx);
 
         let handle = thread::spawn(move || {
-            let mut generator = RngPrivateKeyGenerator::new(ThreadRngFillBytes::new());
+            let mut generate: Box<dyn FnMut() -> (EvmKey, EvmAddress)> = match rng_type {
+                RngType::Incremental => {
+                    let mut gen = EvmIncrementalGenerator::new();
+                    Box::new(move || gen.generate())
+                }
+                RngType::ThreadRng => {
+                    let mut gen = RngPrivateKeyGenerator::new(ThreadRngFillBytes::new());
+                    Box::new(move || {
+                        let key: EvmKey = gen.generate();
+                        let addr = key.derive_address();
+                        (key, addr)
+                    })
+                }
+                RngType::DevRandom => {
+                    let mut gen = RngPrivateKeyGenerator::new(DevRandomRng::new());
+                    Box::new(move || {
+                        let key: EvmKey = gen.generate();
+                        let addr = key.derive_address();
+                        (key, addr)
+                    })
+                }
+            };
             let mut count = 0u64;
 
             loop {
@@ -318,8 +380,7 @@ fn search_vanity_evm(
                     return;
                 }
 
-                let private_key: EvmKey = generator.generate();
-                let address = private_key.derive_address();
+                let (private_key, address) = generate();
                 let addr_bytes = address.as_bytes();
 
                 let prefix_match = prefix_pattern.as_ref().map_or(true, |(pattern, mask)| {
@@ -384,6 +445,7 @@ fn search_vanity_solana(
     prefix: Option<String>,
     suffix: Option<String>,
     threads: Option<usize>,
+    rng_type: RngType,
     quiet: bool,
 ) {
     // Validate base58 characters
@@ -412,6 +474,7 @@ fn search_vanity_solana(
             println!("  Suffix: {} ({} base58 chars)", s, s.len());
         }
         println!("  Threads: {}", num_threads);
+        println!("  RNG: {}", rng_display_name(rng_type));
         println!("  Expected attempts (50% probability): {}", format_number(expected_attempts));
         println!();
     }
@@ -435,7 +498,17 @@ fn search_vanity_solana(
         report_senders.push(report_tx);
 
         let handle = thread::spawn(move || {
-            let mut generator = RngPrivateKeyGenerator::new(ThreadRngFillBytes::new());
+            let mut generate: Box<dyn FnMut() -> SolanaKey> = match rng_type {
+                RngType::ThreadRng => {
+                    let mut gen = RngPrivateKeyGenerator::new(ThreadRngFillBytes::new());
+                    Box::new(move || gen.generate())
+                }
+                RngType::DevRandom => {
+                    let mut gen = RngPrivateKeyGenerator::new(DevRandomRng::new());
+                    Box::new(move || gen.generate())
+                }
+                RngType::Incremental => unreachable!("validated in search_vanity"),
+            };
             let mut count = 0u64;
 
             loop {
@@ -443,7 +516,7 @@ fn search_vanity_solana(
                     return;
                 }
 
-                let private_key: SolanaKey = generator.generate();
+                let private_key: SolanaKey = generate();
                 let address = private_key.derive_address();
                 let addr_str = address.to_string();
 
@@ -658,6 +731,14 @@ fn calculate_base58_search_space(prefix: &Option<String>, suffix: &Option<String
 // ---------------------------------------------------------------------------
 // Display helpers
 // ---------------------------------------------------------------------------
+
+fn rng_display_name(rng_type: RngType) -> &'static str {
+    match rng_type {
+        RngType::ThreadRng => "ThreadRng (ChaCha20)",
+        RngType::DevRandom => "/dev/random",
+        RngType::Incremental => "Incremental (secp256k1 point addition)",
+    }
+}
 
 fn display_evm_key(private_key: &EvmKey, quiet: bool) {
     if quiet {
