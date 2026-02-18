@@ -52,8 +52,8 @@ fn main() {
     
     // === Generate Solana Keys ===
     println!("--- Solana Keys ---");
-    println!("Key size: 64 bytes (512 bits)");
-    println!("Algorithm: Ed25519 (simplified)");
+    println!("Key size: 32 bytes (256 bits)");
+    println!("Algorithm: Ed25519");
     println!("Compatible with: Solana\n");
     
     for i in 1..=3 {

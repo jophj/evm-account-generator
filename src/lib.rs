@@ -6,7 +6,7 @@
 //! ## Features
 //!
 //! - **Type-Safe Key Generation**: Compile-time guarantees for different blockchain types
-//! - **Multi-Blockchain Support**: Generate keys for EVM (32 bytes) and Solana (64 bytes)
+//! - **Multi-Blockchain Support**: Generate keys for EVM and Solana
 //! - **Flexible RNG Options**: Use thread-local RNG or system entropy (/dev/random)
 //! - **Automatic Validation**: Built-in validation with automatic retry for invalid keys
 //! - **Composable Architecture**: Trait-based design for easy extension
@@ -44,8 +44,8 @@
 //! // One generator can create keys for different blockchains
 //! let mut generator = RngPrivateKeyGenerator::new(ThreadRngFillBytes::new());
 //!
-//! let evm_key: EvmKey = generator.generate();         // 32 bytes
-//! let solana_key: SolanaKey = generator.generate();   // 64 bytes
+//! let evm_key: EvmKey = generator.generate();         // 32-byte secp256k1 key
+//! let solana_key: SolanaKey = generator.generate();   // 32-byte Ed25519 seed
 //! ```
 //!
 //! ## Architecture

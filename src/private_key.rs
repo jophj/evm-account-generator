@@ -107,8 +107,8 @@ pub trait PrivateKey: Sized + Clone {
     /// Returns the expected size in bytes for this key type
     ///
     /// Different blockchains use different key sizes:
-    /// - EVM (Ethereum): 32 bytes
-    /// - Solana: 64 bytes
+    /// - EVM (Ethereum): 32 bytes (secp256k1)
+    /// - Solana: 32 bytes (Ed25519 seed)
     ///
     /// # Returns
     ///
