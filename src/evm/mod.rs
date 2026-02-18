@@ -26,5 +26,7 @@
 //! ```
 
 mod private_key;
+mod incremental_generator;
 
 pub use private_key::{EvmPrivateKey as PrivateKey, EvmAddress as Address};
+pub use incremental_generator::EvmIncrementalGenerator;
