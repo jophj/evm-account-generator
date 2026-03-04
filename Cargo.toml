@@ -27,6 +27,9 @@ clap = { version = "4.5", features = ["derive"] }
 sysinfo = "0.37"
 ed25519-dalek = { version = "2", features = ["std"] }
 bs58 = "0.5"
+sha2 = "0.10"
+ripemd = "0.2.0-rc.5"
+bech32 = "0.9"
 
 [dev-dependencies]
 # Add any test-specific dependencies here

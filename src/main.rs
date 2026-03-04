@@ -14,6 +14,7 @@ use evm_account_generator::{
     evm::PrivateKey as EvmKey,
     evm::Address as EvmAddress,
     solana::PrivateKey as SolanaKey,
+    bitcoin::PrivateKey as BitcoinKey,
 };
 use std::io::{self, BufRead, IsTerminal, Write};
 use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc};
@@ -104,6 +105,8 @@ enum ChainType {
     Evm,
     /// Solana
     Solana,
+    /// Bitcoin (P2WPKH / native SegWit, bc1q addresses)
+    Bitcoin,
 }
 
 fn main() {
@@ -141,6 +144,10 @@ fn generate_key(chain: ChainType, rng_type: RngType, quiet: bool) {
                     let key: SolanaKey = generator.generate();
                     display_solana_key(&key, quiet);
                 }
+                ChainType::Bitcoin => {
+                    let key: BitcoinKey = generator.generate();
+                    display_bitcoin_key(&key, quiet);
+                }
             }
         }
         RngType::DevRandom => {
@@ -173,6 +180,10 @@ fn generate_key(chain: ChainType, rng_type: RngType, quiet: bool) {
                         let key: SolanaKey = generator.generate();
                         display_solana_key(&key, quiet);
                     }
+                    ChainType::Bitcoin => {
+                        let key: BitcoinKey = generator.generate();
+                        display_bitcoin_key(&key, quiet);
+                    }
                 }
             }
         }
@@ -186,9 +197,9 @@ fn generate_key(chain: ChainType, rng_type: RngType, quiet: bool) {
                     let (key, _) = generator.generate();
                     display_evm_key(&key, quiet);
                 }
-                ChainType::Solana => {
+                ChainType::Solana | ChainType::Bitcoin => {
                     eprintln!("Error: --rng incremental is only supported for EVM (secp256k1)");
-                    eprintln!("Use --rng thread-rng or --rng dev-random for Solana");
+                    eprintln!("Use --rng thread-rng or --rng dev-random instead");
                     std::process::exit(1);
                 }
             }
@@ -259,6 +270,26 @@ fn derive_address(chain: ChainType, private_key_opt: Option<String>, quiet: bool
                 println!("Address:     {}\n", address);
             }
         }
+        ChainType::Bitcoin => {
+            let private_key = match BitcoinKey::from_string(&private_key_str) {
+                Some(key) => key,
+                None => {
+                    eprintln!("Error: Invalid Bitcoin private key format");
+                    eprintln!("\nAccepted formats:");
+                    eprintln!("  - WIF (Wallet Import Format, starts with K or L for compressed mainnet)");
+                    eprintln!("  - 0x-prefixed 64-character hex string");
+                    std::process::exit(1);
+                }
+            };
+
+            let address = private_key.derive_address();
+            if quiet {
+                println!("{}", address);
+            } else {
+                println!("Private Key (WIF): {}", private_key.to_string());
+                println!("Address:           {}\n", address);
+            }
+        }
     }
 }
 
@@ -283,15 +314,16 @@ fn search_vanity(
         std::process::exit(1);
     }
 
-    if rng_type == RngType::Incremental && chain == ChainType::Solana {
+    if rng_type == RngType::Incremental && chain != ChainType::Evm {
         eprintln!("Error: --rng incremental is only supported for EVM (secp256k1)");
-        eprintln!("Use --rng thread-rng or --rng dev-random for Solana");
+        eprintln!("Use --rng thread-rng or --rng dev-random instead");
         std::process::exit(1);
     }
 
     match chain {
         ChainType::Evm => search_vanity_evm(prefix, suffix, threads, rng_type, quiet),
         ChainType::Solana => search_vanity_solana(prefix, suffix, threads, rng_type, quiet),
+        ChainType::Bitcoin => search_vanity_bitcoin(prefix, suffix, threads, rng_type, quiet),
     }
 }
 
@@ -566,6 +598,132 @@ fn search_vanity_solana(
     }
 }
 
+// ---------------------------------------------------------------------------
+// Bitcoin vanity search
+// ---------------------------------------------------------------------------
+
+fn search_vanity_bitcoin(
+    prefix: Option<String>,
+    suffix: Option<String>,
+    threads: Option<usize>,
+    rng_type: RngType,
+    quiet: bool,
+) {
+    let num_threads = threads.unwrap_or_else(|| {
+        thread::available_parallelism().map(|n| n.get()).unwrap_or(1)
+    });
+
+    // bc1q addresses always start with "bc1q"; account for that in search space
+    let effective_prefix = prefix.as_deref().and_then(|p| p.strip_prefix("bc1q")).map(|s| s.to_string());
+    let display_prefix = prefix.clone();
+    let search_prefix = effective_prefix.or_else(|| prefix.clone());
+
+    let search_space = calculate_bech32_search_space(&search_prefix, &suffix);
+    let expected_attempts = (search_space as f64 * 0.693).ceil() as u64;
+
+    if !quiet {
+        display_cpu_info(num_threads);
+        println!();
+        println!("Searching for Bitcoin vanity address...");
+        if let Some(ref p) = display_prefix {
+            println!("  Prefix: {} ({} chars)", p, p.len());
+        }
+        if let Some(ref s) = suffix {
+            println!("  Suffix: {} ({} chars)", s, s.len());
+        }
+        println!("  Threads: {}", num_threads);
+        println!("  RNG: {}", rng_display_name(rng_type));
+        println!("  Expected attempts (50% probability): {}", format_number(expected_attempts));
+        println!();
+    }
+
+    let (result_tx, result_rx) = mpsc::channel();
+    let (stats_tx, stats_rx) = mpsc::channel();
+    let found = Arc::new(AtomicBool::new(false));
+    let mut report_senders = vec![];
+
+    let start_time = Instant::now();
+    let mut handles = vec![];
+
+    for thread_id in 0..num_threads {
+        let result_tx = result_tx.clone();
+        let stats_tx = stats_tx.clone();
+        let found = Arc::clone(&found);
+        let prefix = prefix.clone();
+        let suffix = suffix.clone();
+
+        let (report_tx, report_rx) = mpsc::channel();
+        report_senders.push(report_tx);
+
+        let handle = thread::spawn(move || {
+            let mut generate: Box<dyn FnMut() -> BitcoinKey> = match rng_type {
+                RngType::ThreadRng => {
+                    let mut gen = RngPrivateKeyGenerator::new(ThreadRngFillBytes::new());
+                    Box::new(move || gen.generate())
+                }
+                RngType::DevRandom => {
+                    let mut gen = RngPrivateKeyGenerator::new(DevRandomRng::new());
+                    Box::new(move || gen.generate())
+                }
+                RngType::Incremental => unreachable!("validated in search_vanity"),
+            };
+            let mut count = 0u64;
+
+            loop {
+                if found.load(Ordering::Relaxed) {
+                    return;
+                }
+
+                let private_key: BitcoinKey = generate();
+                let address = private_key.derive_address();
+                let addr_str = address.to_string();
+
+                let prefix_match = prefix.as_ref().map_or(true, |p| addr_str.starts_with(p.as_str()));
+                let suffix_match = suffix.as_ref().map_or(true, |s| addr_str.ends_with(s.as_str()));
+
+                if prefix_match && suffix_match {
+                    found.store(true, Ordering::Relaxed);
+                    result_tx.send((private_key, thread_id, count)).unwrap();
+                    return;
+                }
+
+                count += 1;
+
+                if report_rx.try_recv().is_ok() {
+                    stats_tx.send(count).ok();
+                    count = 0;
+                }
+            }
+        });
+
+        handles.push(handle);
+    }
+
+    drop(result_tx);
+    drop(stats_tx);
+
+    vanity_progress_loop(
+        result_rx,
+        &stats_rx,
+        &report_senders,
+        start_time,
+        expected_attempts,
+        quiet,
+        |key, quiet_mode| {
+            if quiet_mode {
+                println!("{}", key.to_string());
+            } else {
+                println!("Private Key (WIF): {}", key.to_string());
+                println!("Address:           {}", key.derive_address());
+            }
+        },
+    );
+
+    for handle in handles {
+        handle.join().ok();
+    }
+}
+
 fn validate_base58_pattern(pattern: &str) {
     for c in pattern.chars() {
         if !BASE58_ALPHABET.contains(c) {
@@ -728,6 +886,18 @@ fn calculate_base58_search_space(prefix: &Option<String>, suffix: &Option<String
     space
 }
 
+fn calculate_bech32_search_space(prefix: &Option<String>, suffix: &Option<String>) -> u64 {
+    // bech32 charset has 32 characters
+    let mut space = 1u64;
+    if let Some(p) = prefix {
+        space = space.saturating_mul(32u64.saturating_pow(p.len() as u32));
+    }
+    if let Some(s) = suffix {
+        space = space.saturating_mul(32u64.saturating_pow(s.len() as u32));
+    }
+    space
+}
+
 // ---------------------------------------------------------------------------
 // Display helpers
 // ---------------------------------------------------------------------------
@@ -747,6 +917,16 @@ fn display_evm_key(private_key: &EvmKey, quiet: bool) {
         println!("\n\u{2713} Successfully generated EVM account!\n");
         println!("Private Key: {}", private_key.to_string());
         println!("Address:     {}\n", private_key.derive_address());
+    }
+}
+
+fn display_bitcoin_key(private_key: &BitcoinKey, quiet: bool) {
+    if quiet {
+        println!("{}", private_key.to_string());
+    } else {
+        println!("\n\u{2713} Successfully generated Bitcoin account!\n");
+        println!("Private Key (WIF): {}", private_key.to_string());
+        println!("Address:           {}\n", private_key.derive_address());
     }
 }
 

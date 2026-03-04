@@ -72,6 +72,7 @@ pub mod private_key;
 pub mod private_key_generator;
 pub mod evm;
 pub mod solana;
+pub mod bitcoin;
 
 pub use private_key::PrivateKey;
 pub use private_key_generator::{PrivateKeyGenerator, RngPrivateKeyGenerator, SequentialPrivateKeyGenerator, FillBytes};
