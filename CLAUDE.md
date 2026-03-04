@@ -42,6 +42,8 @@ Three traits form the foundation:
 
 - **`src/solana/`** — `SolanaPrivateKey` (32-byte Ed25519 seed), address is base58-encoded public key. `to_string()` outputs a Phantom-compatible base58 64-byte keypair.
 
+- **`src/bitcoin/`** — `BitcoinPrivateKey` (32-byte secp256k1), `BitcoinAddress` (P2WPKH native SegWit). Derives compressed pubkey → HASH160 → Bech32 (`bc1q…`). `to_string()` outputs WIF (Wallet Import Format). Uses `sha2`, `ripemd`, and `bech32` crates.
+
 ### RNG module (`src/rng/`)
 
 - `ThreadRngFillBytes` — wraps `rand::thread_rng()` (ChaCha20 CSPRNG, cross-platform)

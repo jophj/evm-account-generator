@@ -21,6 +21,7 @@ use evm_account_generator::{
     PrivateKey, PrivateKeyGenerator, RngPrivateKeyGenerator, FillBytes, ThreadRngFillBytes,
     evm::PrivateKey as EvmKey,
     solana::PrivateKey as SolanaKey,
+    bitcoin::PrivateKey as BitcoinKey,
 };
 
 fn main() {
@@ -68,13 +69,31 @@ fn main() {
         println!();
     }
     
+    // === Generate Bitcoin Keys ===
+    println!("--- Bitcoin Keys ---");
+    println!("Key size: 32 bytes (256 bits)");
+    println!("Algorithm: ECDSA secp256k1");
+    println!("Address format: P2WPKH (native SegWit)\n");
+    
+    for i in 1..=3 {
+        let key: BitcoinKey = generator.generate();
+        let address = key.derive_address();
+        
+        println!("Bitcoin Key #{}", i);
+        println!("  Private Key (WIF): {}", key.to_string());
+        println!("  Address (P2WPKH):  {}", address);
+        println!("  Bytes:             {} bytes", key.as_bytes().len());
+        println!();
+    }
+    
     // === Demonstrate Generic Programming ===
     demonstrate_generic_function(&mut generator);
     
     // === Demonstrate Key Size Detection ===
     println!("\n--- Key Size Information ---");
-    println!("EVM key size:    {} bytes", EvmKey::key_size());
-    println!("Solana key size: {} bytes", SolanaKey::key_size());
+    println!("EVM key size:     {} bytes", EvmKey::key_size());
+    println!("Solana key size:  {} bytes", SolanaKey::key_size());
+    println!("Bitcoin key size: {} bytes", BitcoinKey::key_size());
     
     println!("\n✓ Multi-blockchain key generation completed successfully!");
     println!("\n💡 Key Insight:");

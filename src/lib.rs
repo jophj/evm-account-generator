@@ -6,7 +6,7 @@
 //! ## Features
 //!
 //! - **Type-Safe Key Generation**: Compile-time guarantees for different blockchain types
-//! - **Multi-Blockchain Support**: Generate keys for EVM and Solana
+//! - **Multi-Blockchain Support**: Generate keys for EVM, Solana, and Bitcoin
 //! - **Flexible RNG Options**: Use thread-local RNG or system entropy (/dev/random)
 //! - **Automatic Validation**: Built-in validation with automatic retry for invalid keys
 //! - **Composable Architecture**: Trait-based design for easy extension
@@ -65,6 +65,7 @@
 //! - [`private_key_generator`] - Generic key generation implementation
 //! - [`evm`] - Ethereum Virtual Machine key support
 //! - [`solana`] - Solana blockchain key support
+//! - [`bitcoin`] - Bitcoin key support (P2WPKH native SegWit)
 //! - [`rng`] - Random number generation implementations
 
 pub mod rng;
@@ -72,6 +73,7 @@ pub mod private_key;
 pub mod private_key_generator;
 pub mod evm;
 pub mod solana;
+pub mod bitcoin;
 
 pub use private_key::PrivateKey;
 pub use private_key_generator::{PrivateKeyGenerator, RngPrivateKeyGenerator, SequentialPrivateKeyGenerator, FillBytes};
