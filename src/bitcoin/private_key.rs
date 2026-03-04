@@ -246,4 +246,41 @@ mod tests {
         let address = key.derive_address();
         assert_eq!(address.as_bytes().len(), 20);
     }
+
+    #[test]
+    fn test_address_derivation_vectors() {
+        let vectors: &[(&str, &str)] = &[
+            ("d56f9c9513d4ce3da196e9ae45a21084ea175fec14da5e82e3050a250257240d", "bc1qk5jgaepcjg9hsenq3my53w9nx4l7qchvyeu8a5"),
+            ("d56f9c9513d4ce3da196e9ae45a21084ea175fec14da5e82e3050a250257240e", "bc1qz4edc53xa0g2qke6uy95qxg0at6kanzl456xmz"),
+            ("d56f9c9513d4ce3da196e9ae45a21084ea175fec14da5e82e3050a250257240f", "bc1qwhhu6952lchwtcavsp8qgu5xk06whd48v39hq5"),
+            ("d56f9c9513d4ce3da196e9ae45a21084ea175fec14da5e82e3050a2502572410", "bc1q7yz4g2jmgzxuu0fvh0g8zlnmefq879y2msxd9g"),
+            ("d56f9c9513d4ce3da196e9ae45a21084ea175fec14da5e82e3050a2502572411", "bc1qmlwvrzkj3nwu8v5zc7dkr4xjykny6cv7sas6u7"),
+            ("d56f9c9513d4ce3da196e9ae45a21084ea175fec14da5e82e3050a2502572412", "bc1quyhftjl54kx674dtpsq3ugwspaadacgspethxu"),
+            ("d56f9c9513d4ce3da196e9ae45a21084ea175fec14da5e82e3050a2502572413", "bc1qtp3978s46nmrv2gvd9njrrv38kt4h9wvg43d9p"),
+            ("d56f9c9513d4ce3da196e9ae45a21084ea175fec14da5e82e3050a2502572414", "bc1qjfa8c086n7ge4fx3gaf54h2ed57nmjs7ssvvme"),
+            ("d56f9c9513d4ce3da196e9ae45a21084ea175fec14da5e82e3050a2502572415", "bc1qxvulj2ht8sucks7du99lh4nsjf9sh2fvd9tjaf"),
+            ("d56f9c9513d4ce3da196e9ae45a21084ea175fec14da5e82e3050a2502572416", "bc1qhrjcrjushkm4zsdc7ygdfqytdspn98d0qs2v0w"),
+            ("d56f9c9513d4ce3da196e9ae45a21084ea175fec14da5e82e3050a2502572417", "bc1qssmr406l33aelet646kku0qlwgz4z3xylx7xjh"),
+            ("d56f9c9513d4ce3da196e9ae45a21084ea175fec14da5e82e3050a2502572418", "bc1qqw0vsapckfwcnupz68k96590h4tjq3vhzuxurq"),
+            ("d56f9c9513d4ce3da196e9ae45a21084ea175fec14da5e82e3050a2502572419", "bc1q8yx0k3v3ngf70aqe9uwkl4xua3asw573n4datg"),
+            ("d56f9c9513d4ce3da196e9ae45a21084ea175fec14da5e82e3050a250257241a", "bc1qe4ufmjvtasx85j90adjcgkt8rtlv3vfrvjjyjv"),
+            ("d56f9c9513d4ce3da196e9ae45a21084ea175fec14da5e82e3050a250257241b", "bc1qxs6kjy2ue9tuv8hn4cs2hc9glp3r8devnj7amz"),
+            ("d56f9c9513d4ce3da196e9ae45a21084ea175fec14da5e82e3050a250257241c", "bc1qgquvezagw9zyhyj6xvrzdfdujy6csxxap2wy80"),
+            ("d56f9c9513d4ce3da196e9ae45a21084ea175fec14da5e82e3050a250257241d", "bc1quhf6wtqfduaa0092xkp9pz09k4rjrz9cxpulzl"),
+            ("d56f9c9513d4ce3da196e9ae45a21084ea175fec14da5e82e3050a250257241e", "bc1qnvnlk7rkj73rat8d86eeuekvdpf8x589xjevfm"),
+            ("d56f9c9513d4ce3da196e9ae45a21084ea175fec14da5e82e3050a250257241f", "bc1qhn73m4zjgy99h2wueyfdrxmtuhs8m7ws4vv2v7"),
+            ("d56f9c9513d4ce3da196e9ae45a21084ea175fec14da5e82e3050a2502572420", "bc1qq00d2la27u2ddetdqst86f8y0venr4l70vsw2f"),
+            ("d56f9c9513d4ce3da196e9ae45a21084ea175fec14da5e82e3050a2502572421", "bc1q596w4c8dveexpq9d6weedmdgnzw7uvrwfgx2xj"),
+            ("d56f9c9513d4ce3da196e9ae45a21084ea175fec14da5e82e3050a2502572422", "bc1q3vnnztxp5u4c78547x4gwpncn5luvgtvugvskr"),
+            ("d56f9c9513d4ce3da196e9ae45a21084ea175fec14da5e82e3050a2502572423", "bc1q4z6xlla5dacdhpy6vddvwau7lj79npx9r4ve99"),
+        ];
+
+        for (priv_hex, expected_addr) in vectors {
+            let bytes = hex::decode(priv_hex).unwrap();
+            let key = BitcoinPrivateKey::new(&bytes)
+                .unwrap_or_else(|| panic!("Failed to create key from {}", priv_hex));
+            let address = key.derive_address().to_string();
+            assert_eq!(address, *expected_addr, "address mismatch for private key {}", priv_hex);
+        }
+    }
 }
