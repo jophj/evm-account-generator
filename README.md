@@ -29,6 +29,9 @@ evm-account-generator generate --type solana
 # With /dev/random entropy (Unix only)
 evm-account-generator generate --type evm --rng dev-random
 
+# With incremental EC point addition (EVM only, fastest)
+evm-account-generator generate --rng incremental
+
 # Quiet mode (key only, no extra output)
 evm-account-generator generate --type solana -q
 ```
@@ -53,6 +56,9 @@ echo "0x1234...abcdef" | evm-account-generator derive
 evm-account-generator vanity --prefix dead
 evm-account-generator vanity --suffix beef
 evm-account-generator vanity --prefix dead --suffix beef --threads 8
+
+# Use incremental RNG for faster EVM vanity search
+evm-account-generator vanity --prefix dead --rng incremental
 
 # Solana: base58 prefix/suffix
 evm-account-generator vanity --type solana --prefix jop
