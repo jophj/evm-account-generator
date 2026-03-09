@@ -611,6 +611,10 @@ fn search_vanity_bitcoin(
     rng_type: RngType,
     quiet: bool,
 ) {
+    let prefix = prefix.map(|p| {
+        p.strip_prefix("bc1q").unwrap_or(&p).to_string()
+    });
+
     if let Some(ref p) = prefix {
         validate_bech32_pattern(p);
     }
@@ -625,12 +629,14 @@ fn search_vanity_bitcoin(
     let search_space = calculate_bech32_search_space(&prefix, &suffix);
     let expected_attempts = (search_space as f64 * 0.693).ceil() as u64;
 
+    let prefix = prefix.map(|p| format!("bc1q{}", p));
+
     if !quiet {
         display_cpu_info(num_threads);
         println!();
         println!("Searching for Bitcoin P2WPKH vanity address...");
         if let Some(ref p) = prefix {
-            println!("  Prefix: {} ({} bech32 chars)", p, p.len());
+            println!("  Prefix: {} ({} bech32 chars after bc1q)", p, p.len() - 4);
         }
         if let Some(ref s) = suffix {
             println!("  Suffix: {} ({} bech32 chars)", s, s.len());
