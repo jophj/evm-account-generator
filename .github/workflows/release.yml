@@ -1,0 +1,153 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  guard:
+    name: Decide whether to release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      should_release: ${{ steps.check.outputs.should_release }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version from Cargo.toml
+        id: version
+        run: |
+          version=$(cargo metadata --format-version=1 --no-deps | jq -r '.packages[0].version')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Cargo.toml version: $version"
+
+      - name: Check whether tag already exists
+        id: check
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          if git ls-remote --exit-code --tags origin "refs/tags/v$version" >/dev/null 2>&1; then
+            echo "Tag v$version already exists — skipping release."
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Tag v$version does not exist — will release."
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    name: Build ${{ matrix.target }}
+    needs: guard
+    if: needs.guard.outputs.should_release == 'true'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            use_cross: true
+            archive: tar.gz
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            use_cross: true
+            archive: tar.gz
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            use_cross: false
+            archive: tar.gz
+          - os: macos-13
+            target: x86_64-apple-darwin
+            use_cross: false
+            archive: tar.gz
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            use_cross: false
+            archive: zip
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Install nasm (Windows vendored OpenSSL / keccak-asm)
+        if: runner.os == 'Windows'
+        uses: ilammy/setup-nasm@v1
+
+      - name: Install cross
+        if: matrix.use_cross
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cross
+
+      - name: Build (cross)
+        if: matrix.use_cross
+        run: cross build --release --locked --target ${{ matrix.target }} --features vendored-openssl
+
+      - name: Build (cargo)
+        if: ${{ !matrix.use_cross }}
+        run: cargo build --release --locked --target ${{ matrix.target }} --features vendored-openssl
+
+      - name: Package (unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          version="${{ needs.guard.outputs.version }}"
+          target="${{ matrix.target }}"
+          name="multichain-keygen-v$version-$target"
+          mkdir -p "dist/$name"
+          cp "target/$target/release/multichain-keygen" "dist/$name/"
+          cp README.md "dist/$name/"
+          tar -C dist -czf "dist/$name.tar.gz" "$name"
+          ( cd dist && shasum -a 256 "$name.tar.gz" > "$name.tar.gz.sha256" )
+
+      - name: Package (windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          version="${{ needs.guard.outputs.version }}"
+          target="${{ matrix.target }}"
+          name="multichain-keygen-v$version-$target"
+          mkdir -p "dist/$name"
+          cp "target/$target/release/multichain-keygen.exe" "dist/$name/"
+          cp README.md "dist/$name/"
+          ( cd dist && 7z a "$name.zip" "$name" >/dev/null )
+          ( cd dist && certutil -hashfile "$name.zip" SHA256 > "$name.zip.sha256" )
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: multichain-keygen-${{ matrix.target }}
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*.sha256
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    needs: [guard, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          version="${{ needs.guard.outputs.version }}"
+          gh release create "v$version" \
+            --target "$GITHUB_SHA" \
+            --title "v$version" \
+            --generate-notes \
+            dist/*
