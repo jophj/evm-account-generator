@@ -26,7 +26,7 @@ use sysinfo::System;
 
 #[derive(Parser)]
 #[command(name = "multichain-keygen")]
-#[command(version = "0.1.0")]
+#[command(version)]
 #[command(about = "Generate blockchain private keys", long_about = None)]
 struct Cli {
     #[command(subcommand)]

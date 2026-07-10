@@ -1,6 +1,6 @@
 [package]
 name = "multichain-keygen"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 authors = ["Your Name <your.email@example.com>"]
 description = "A Rust library for generating cryptographically secure blockchain private keys (EVM, Solana, Bitcoin) with composable RNG architecture"
@@ -41,3 +41,7 @@ std = []
 
 # Optional features
 dev-random = [] # Enable /dev/random support
+
+# Statically link a vendored OpenSSL instead of the system libssl.
+# Used by the release workflow to produce portable, dependency-free binaries.
+vendored-openssl = ["openssl/vendored"]

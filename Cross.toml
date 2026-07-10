@@ -1,0 +1,10 @@
+# cross (https://github.com/cross-rs/cross) configuration for release builds.
+#
+# The release workflow builds the Linux musl targets inside cross's container
+# images. Two native build dependencies need extra tooling that the stock
+# images don't always ship:
+#   - keccak-asm shells out to `perl` to generate its assembly
+#   - openssl-src (enabled via the `vendored-openssl` feature) needs `perl` + `make`
+# Install them before the build so the container matches a GitHub-hosted runner.
+[build]
+pre-build = ["apt-get update && apt-get install -y --no-install-recommends perl make"]
