@@ -11,6 +11,17 @@ A Rust library and CLI for generating cryptographically secure blockchain privat
 - **Composable Architecture**: Trait-based design for easy extension to new blockchains
 - **CLI with Vanity Search**: Generate, derive, and search for vanity addresses
 
+## Prerequisites
+
+Building requires the **system OpenSSL development libraries** to be present and
+discoverable (used by the `openssl` entropy source). Without them, the
+`openssl-sys` crate fails to compile.
+
+- **Debian/Ubuntu**: `sudo apt install libssl-dev pkg-config`
+- **Fedora/RHEL**: `sudo dnf install openssl-devel pkgconf-pkg-config`
+- **macOS**: `brew install openssl@3` (if not auto-detected, set `OPENSSL_DIR=$(brew --prefix openssl@3)`)
+- **Windows**: install OpenSSL (e.g. via `vcpkg install openssl`) or use a prebuilt distribution
+
 ## CLI Usage
 
 ```bash
