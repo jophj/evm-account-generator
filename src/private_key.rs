@@ -24,7 +24,7 @@
 /// # Examples
 ///
 /// ```rust
-/// use evm_account_generator::{PrivateKey, evm::PrivateKey as EvmKey};
+/// use multichain_keygen::{PrivateKey, evm::PrivateKey as EvmKey};
 ///
 /// // Create an EVM private key from bytes
 /// let bytes = [1u8; 32];
@@ -60,7 +60,7 @@ pub trait PrivateKey: Sized + Clone {
     /// # Examples
     ///
     /// ```rust
-    /// use evm_account_generator::{PrivateKey, evm::PrivateKey as EvmKey};
+    /// use multichain_keygen::{PrivateKey, evm::PrivateKey as EvmKey};
     ///
     /// let bytes = [1u8; 32];
     /// let key = EvmKey::new(&bytes).expect("Valid key");
@@ -82,7 +82,7 @@ pub trait PrivateKey: Sized + Clone {
     /// # Examples
     ///
     /// ```rust
-    /// use evm_account_generator::{PrivateKey, evm::PrivateKey as EvmKey};
+    /// use multichain_keygen::{PrivateKey, evm::PrivateKey as EvmKey};
     ///
     /// let key = EvmKey::from_string(
     ///     "0x0101010101010101010101010101010101010101010101010101010101010101"

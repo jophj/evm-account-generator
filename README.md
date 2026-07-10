@@ -1,6 +1,6 @@
-# EVM Account Generator
+# Multichain Keygen
 
-A Rust library and CLI for generating cryptographically secure blockchain private keys with a composable, type-safe architecture. Supports EVM (Ethereum) and Solana.
+A Rust library and CLI for generating cryptographically secure blockchain private keys with a composable, type-safe architecture. Supports EVM (Ethereum), Solana, and Bitcoin.
 
 ## Features
 
@@ -21,48 +21,48 @@ cargo build --release
 
 ```bash
 # EVM (default)
-evm-account-generator generate
+multichain-keygen generate
 
 # Solana
-evm-account-generator generate --type solana
+multichain-keygen generate --type solana
 
 # With /dev/random entropy (Unix only)
-evm-account-generator generate --type evm --rng dev-random
+multichain-keygen generate --type evm --rng dev-random
 
 # With incremental EC point addition (EVM only, fastest)
-evm-account-generator generate --rng incremental
+multichain-keygen generate --rng incremental
 
 # Quiet mode (key only, no extra output)
-evm-account-generator generate --type solana -q
+multichain-keygen generate --type solana -q
 ```
 
 ### Derive an address from a private key
 
 ```bash
 # EVM (hex)
-evm-account-generator derive 0x1234...abcdef
+multichain-keygen derive 0x1234...abcdef
 
 # Solana (base58 keypair)
-evm-account-generator derive --type solana <base58-keypair>
+multichain-keygen derive --type solana <base58-keypair>
 
 # Read from stdin
-echo "0x1234...abcdef" | evm-account-generator derive
+echo "0x1234...abcdef" | multichain-keygen derive
 ```
 
 ### Vanity address search
 
 ```bash
 # EVM: hex prefix/suffix
-evm-account-generator vanity --prefix dead
-evm-account-generator vanity --suffix beef
-evm-account-generator vanity --prefix dead --suffix beef --threads 8
+multichain-keygen vanity --prefix dead
+multichain-keygen vanity --suffix beef
+multichain-keygen vanity --prefix dead --suffix beef --threads 8
 
 # Use incremental RNG for faster EVM vanity search
-evm-account-generator vanity --prefix dead --rng incremental
+multichain-keygen vanity --prefix dead --rng incremental
 
 # Solana: base58 prefix/suffix
-evm-account-generator vanity --type solana --prefix jop
-evm-account-generator vanity --type solana --suffix xyz
+multichain-keygen vanity --type solana --prefix jop
+multichain-keygen vanity --type solana --suffix xyz
 ```
 
 ## Library Usage
@@ -71,13 +71,13 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-evm-account-generator = "0.1.0"
+multichain-keygen = "0.1.0"
 ```
 
 ### Basic Usage - EVM Private Key
 
 ```rust
-use evm_account_generator::{
+use multichain_keygen::{
     RngPrivateKeyGenerator, PrivateKeyGenerator, ThreadRngFillBytes,
     PrivateKey, evm::PrivateKey as EvmKey,
 };
@@ -94,7 +94,7 @@ fn main() {
 ### Multi-Blockchain Support
 
 ```rust
-use evm_account_generator::{
+use multichain_keygen::{
     RngPrivateKeyGenerator, PrivateKeyGenerator, ThreadRngFillBytes,
     PrivateKey,
     evm::PrivateKey as EvmKey,
@@ -118,7 +118,7 @@ fn main() {
 ### Using DevRandomRng (Unix/Linux/macOS)
 
 ```rust
-use evm_account_generator::{
+use multichain_keygen::{
     DevRandomRng, RngPrivateKeyGenerator, PrivateKeyGenerator,
     PrivateKey, evm::PrivateKey as EvmKey,
 };
@@ -273,7 +273,7 @@ cargo run --example vanity
 ### Custom RNG Implementation
 
 ```rust
-use evm_account_generator::{
+use multichain_keygen::{
     FillBytes, RngPrivateKeyGenerator, PrivateKeyGenerator,
     PrivateKey, evm::PrivateKey as EvmKey,
 };
@@ -299,7 +299,7 @@ fn main() {
 ### Working with Existing Keys
 
 ```rust
-use evm_account_generator::{PrivateKey, evm::PrivateKey as EvmKey};
+use multichain_keygen::{PrivateKey, evm::PrivateKey as EvmKey};
 
 fn main() {
     let hex_key = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
@@ -317,7 +317,7 @@ fn main() {
 ### Generic Function for Multiple Blockchains
 
 ```rust
-use evm_account_generator::{
+use multichain_keygen::{
     PrivateKey, PrivateKeyGenerator, RngPrivateKeyGenerator, FillBytes,
 };
 
@@ -397,7 +397,7 @@ cargo test --doc
 Implement the `PrivateKey` trait for your blockchain:
 
 ```rust
-use evm_account_generator::PrivateKey;
+use multichain_keygen::PrivateKey;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct MyChainKey([u8; 32]);

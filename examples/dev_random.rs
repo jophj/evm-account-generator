@@ -33,7 +33,7 @@
 //! - In virtualized/containerized environments
 //! - On embedded devices without hardware RNG
 
-use evm_account_generator::{
+use multichain_keygen::{
     DevRandomRng, 
     RngPrivateKeyGenerator, 
     PrivateKeyGenerator,
@@ -42,7 +42,7 @@ use evm_account_generator::{
 };
 
 fn main() {
-    println!("EVM Account Generator - DevRandomRng Example");
+    println!("Multichain Keygen - DevRandomRng Example");
     println!("============================================\n");
     
     // Display platform information

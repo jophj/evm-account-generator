@@ -1,4 +1,4 @@
-use evm_account_generator::{
+use multichain_keygen::{
     evm::PrivateKey as EvmKey, PrivateKey, PrivateKeyGenerator, RngPrivateKeyGenerator,
     ThreadRngFillBytes,
 };

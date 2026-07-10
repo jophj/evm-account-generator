@@ -36,7 +36,7 @@ use crate::FillBytes;
 /// # Examples
 ///
 /// ```rust,no_run
-/// use evm_account_generator::{
+/// use multichain_keygen::{
 ///     DevRandomRng, RngPrivateKeyGenerator, PrivateKeyGenerator,
 ///     PrivateKey, evm::PrivateKey as EvmKey,
 /// };
@@ -60,7 +60,7 @@ impl DevRandomRng {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// use evm_account_generator::DevRandomRng;
+    /// use multichain_keygen::DevRandomRng;
     ///
     /// // This works on Unix-like systems
     /// let rng = DevRandomRng::new();
@@ -94,7 +94,7 @@ impl FillBytes for DevRandomRng {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// use evm_account_generator::{FillBytes, DevRandomRng};
+    /// use multichain_keygen::{FillBytes, DevRandomRng};
     ///
     /// let mut rng = DevRandomRng::new();
     /// let mut buffer = [0u8; 32];

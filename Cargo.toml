@@ -1,21 +1,21 @@
 [package]
-name = "evm-account-generator"
+name = "multichain-keygen"
 version = "0.1.0"
 edition = "2021"
 authors = ["Your Name <your.email@example.com>"]
-description = "A Rust library for generating cryptographically secure EVM private keys with composable RNG architecture"
+description = "A Rust library for generating cryptographically secure blockchain private keys (EVM, Solana, Bitcoin) with composable RNG architecture"
 license = "MIT"
-repository = "https://github.com/yourusername/evm-account-generator"
-keywords = ["ethereum", "evm", "crypto", "private-key", "blockchain"]
+repository = "https://github.com/jophj/multichain-keygen"
+keywords = ["ethereum", "solana", "bitcoin", "crypto", "blockchain"]
 categories = ["cryptography", "development-tools"]
 readme = "README.md"
 
 [[bin]]
-name = "evm-account-generator"
+name = "multichain-keygen"
 path = "src/main.rs"
 
 [lib]
-name = "evm_account_generator"
+name = "multichain_keygen"
 path = "src/lib.rs"
 
 [dependencies]

@@ -4,7 +4,7 @@
 //! private keys on EVM and Solana blockchains with various entropy sources.
 
 use clap::{Parser, Subcommand, ValueEnum};
-use evm_account_generator::{
+use multichain_keygen::{
     DevRandomRng,
     EvmIncrementalGenerator,
     RngPrivateKeyGenerator,
@@ -24,7 +24,7 @@ use std::time::{Duration, Instant};
 use sysinfo::System;
 
 #[derive(Parser)]
-#[command(name = "evm-account-generator")]
+#[command(name = "multichain-keygen")]
 #[command(version = "0.1.0")]
 #[command(about = "Generate blockchain private keys", long_about = None)]
 struct Cli {
@@ -303,7 +303,7 @@ fn search_vanity(
 ) {
     if prefix.is_none() && suffix.is_none() {
         eprintln!("Error: Must specify at least --prefix or --suffix");
-        eprintln!("Example: evm-account-generator vanity --prefix dead");
+        eprintln!("Example: multichain-keygen vanity --prefix dead");
         std::process::exit(1);
     }
 

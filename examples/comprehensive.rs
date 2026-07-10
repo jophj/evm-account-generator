@@ -8,13 +8,13 @@
 //! - Error handling for invalid keys
 //! - Address derivation
 
-use evm_account_generator::{
+use multichain_keygen::{
     DevRandomRng, PrivateKeyGenerator, RngPrivateKeyGenerator, ThreadRngFillBytes,
     PrivateKey, evm::PrivateKey as EvmKey,
 };
 
 fn main() {
-    println!("EVM Account Generator - Comprehensive Example");
+    println!("Multichain Keygen - Comprehensive Example");
     println!("==============================================\n");
 
     // === 1. Creating a key from raw bytes ===
