@@ -13,7 +13,7 @@
 //! # When NOT to Use OpenSslRng
 //!
 //! Consider using ThreadRngFillBytes instead if:
-//! - You have no OpenSSL-specific requirement — it is no more secure
+//! - You have no OpenSSL-specific requirement
 //! - You want to avoid the system OpenSSL build/link dependency
 //!
 //! # Platform Support
@@ -68,7 +68,6 @@ fn main() {
     println!("  Bytes consumed: {} bytes (4 keys × 32 bytes)", 4 * 32);
 
     println!("\n⚠️  SECURITY NOTE:");
-    println!("   OpenSslRng is cryptographically sound, but:");
-    println!("   - ThreadRngFillBytes is also cryptographically secure");
-    println!("   - Prefer OpenSslRng only when OpenSSL is a specific requirement");
+    println!("   OpenSslRng is cryptographically sound.");
+    println!("   Prefer it when OpenSSL is a specific requirement for your environment.");
 }

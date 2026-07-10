@@ -14,9 +14,6 @@ use crate::FillBytes;
 /// for environments that require OpenSSL as the entropy source — for example,
 /// FIPS or other compliance policies.
 ///
-/// Cryptographically it is no stronger than [`ThreadRngFillBytes`](crate::ThreadRngFillBytes);
-/// the reason to choose it is the OpenSSL provenance, not better randomness.
-///
 /// # Platform Support
 ///
 /// - ✅ Linux: Fully supported
