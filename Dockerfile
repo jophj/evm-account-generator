@@ -1,11 +1,19 @@
 # syntax=docker/dockerfile:1
 
-# Docker Hardened Images. `dhi.io/rust` requires your org's DHI entitlement.
-# Override RUST_IMAGE to a mirrored namespace (e.g. <org>/dhi-rust) if needed.
-# Verify the exact available tag in the DHI Rust catalog before building —
-# the dev variant adds the `-dev` suffix (e.g. `1-alpine` -> `1-alpine-dev`).
+# Docker Hardened Images. These base images require your org's DHI entitlement.
+# Override the image args to point at a mirrored namespace (e.g. <org>/dhi-rust)
+# if needed, and verify the exact tags in the DHI catalog before building.
+#
+# Build image: the dev variant adds the `-dev` suffix (e.g. `1.96.1-alpine3.23`
+# -> `1.96.1-alpine3.23-dev`).
 ARG RUST_IMAGE=dhi.io/rust
 ARG RUST_TAG=1.96.1-alpine3.23
+
+# Runtime image: a minimal Alpine base. The release binary is musl-linked and
+# needs only a matching (musl/Alpine) userland plus libgcc_s.so.1 (copied from
+# the build stage below).
+ARG RUNTIME_IMAGE=dhi.io/alpine-base
+ARG RUNTIME_TAG=3.23
 
 # ---- build stage (dev variant: shell + Rust toolchain) ----
 FROM ${RUST_IMAGE}:${RUST_TAG}-dev AS build
@@ -23,13 +31,13 @@ COPY Cargo.toml Cargo.lock ./
 COPY src ./src
 RUN cargo build --release --locked --bin multichain-keygen
 
-# ---- runtime stage (non-dev variant: hardened, nonroot) ----
-# The Rust runtime variant keeps a shell + toolchain, so this image is ~650MB.
-# The binary is a fully static musl ELF (~1.8MB), so for a much smaller,
-# shell-less, toolchain-less runtime you can swap this FROM for the DHI `static`
-# image once your org has it entitled — confirm the exact tag in the catalog,
-# e.g.  FROM dhi.io/static:<tag>  (Alpine/musl static variant). Nothing else changes.
-FROM ${RUST_IMAGE}:${RUST_TAG} AS runtime
+# ---- runtime stage (minimal hardened Alpine base, nonroot) ----
+# Only the binary and its one dynamic dependency are copied in — no Rust
+# toolchain in the final image. Rust's musl build links libgcc_s.so.1 (the
+# unwinder) dynamically, so it is copied from the build stage rather than
+# pulling a package into the runtime.
+FROM ${RUNTIME_IMAGE}:${RUNTIME_TAG} AS runtime
+COPY --from=build /usr/lib/libgcc_s.so.1 /usr/lib/libgcc_s.so.1
 COPY --from=build /src/target/release/multichain-keygen /usr/local/bin/multichain-keygen
 
 # DHI images may set their own entrypoint; override it explicitly.

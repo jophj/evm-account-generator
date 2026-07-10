@@ -69,23 +69,26 @@ multichain-keygen vanity --type solana --suffix xyz
 
 The CLI ships with a multi-stage [`Dockerfile`](Dockerfile) built on
 [Docker Hardened Images](https://www.docker.com/products/hardened-images/) (DHI) —
-minimal, near-zero-CVE, nonroot base images. It compiles a statically linked
-(musl) release binary in a `dhi.io/rust:*-dev` build stage and copies it into a
-minimal `dhi.io/rust` runtime stage that runs as a nonroot user.
+minimal, near-zero-CVE, nonroot base images. It compiles a musl release binary in a
+`dhi.io/rust:*-dev` build stage and copies just the binary (plus its one dynamic
+dependency, `libgcc_s.so.1`) into a minimal `dhi.io/alpine-base` runtime stage that
+runs as a nonroot user. The final image is ~4MB.
 
-> **Prerequisite:** the `dhi.io/rust` base images require your organization's DHI
-> subscription entitlement. Both the image and tag are build args, so you can point
-> at a mirrored namespace or a pinned tag instead (see below).
+> **Prerequisite:** the `dhi.io/*` base images require your organization's DHI
+> subscription entitlement. The build and runtime images/tags are all build args, so
+> you can point at a mirrored namespace or different tags instead (see below).
 
 ### Build
 
 ```bash
 docker build -t multichain-keygen .
 
-# Override the base image / tag (e.g. a mirrored namespace or pinned version)
+# Override the base images / tags (e.g. a mirrored namespace or different versions)
 docker build \
   --build-arg RUST_IMAGE=your-namespace/dhi-rust \
   --build-arg RUST_TAG=1.96.1-alpine3.23 \
+  --build-arg RUNTIME_IMAGE=your-namespace/dhi-alpine-base \
+  --build-arg RUNTIME_TAG=3.23 \
   -t multichain-keygen .
 ```
 
@@ -109,10 +112,9 @@ echo "0x1234...abcdef" | docker run --rm -i multichain-keygen derive --type evm
 docker run --rm multichain-keygen vanity --prefix dead --type evm
 ```
 
-> **Note:** the DHI Rust *runtime* variant keeps a shell and toolchain (~650MB
-> image). Because the binary is fully static, you can swap the runtime stage for
-> the smaller, shell-less `dhi.io/static` image — see the comment in the
-> `Dockerfile` for details.
+> **Note:** for an even smaller, shell-less runtime you can point `RUNTIME_IMAGE`
+> at the DHI `static` image (e.g. `dhi.io/static:<date>-musl-alpine3.23`); the
+> binary runs there unchanged — see the comment in the `Dockerfile`.
 
 ## Library Usage
 
