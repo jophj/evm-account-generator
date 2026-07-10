@@ -6,6 +6,7 @@
 use clap::{Parser, Subcommand, ValueEnum};
 use multichain_keygen::{
     DevRandomRng,
+    OpenSslRng,
     EvmIncrementalGenerator,
     RngPrivateKeyGenerator,
     PrivateKeyGenerator,
@@ -95,6 +96,8 @@ enum RngType {
     ThreadRng,
     /// Use /dev/random (Unix only, highest entropy quality)
     DevRandom,
+    /// Use the system OpenSSL library (RAND_bytes, cross-platform)
+    Openssl,
     /// Use incremental EC point addition (EVM only, fastest for vanity search)
     Incremental,
 }
@@ -184,6 +187,29 @@ fn generate_key(chain: ChainType, rng_type: RngType, quiet: bool) {
                         let key: BitcoinKey = generator.generate();
                         display_bitcoin_key(&key, quiet);
                     }
+                }
+            }
+        }
+        RngType::Openssl => {
+            if !quiet {
+                println!("Using: OpenSSL (RAND_bytes)");
+            }
+
+            let rng = OpenSslRng::new();
+            let mut generator = RngPrivateKeyGenerator::new(rng);
+
+            match chain {
+                ChainType::Evm => {
+                    let key: EvmKey = generator.generate();
+                    display_evm_key(&key, quiet);
+                }
+                ChainType::Solana => {
+                    let key: SolanaKey = generator.generate();
+                    display_solana_key(&key, quiet);
+                }
+                ChainType::Bitcoin => {
+                    let key: BitcoinKey = generator.generate();
+                    display_bitcoin_key(&key, quiet);
                 }
             }
         }
@@ -404,6 +430,14 @@ fn search_vanity_evm(
                         (key, addr)
                     })
                 }
+                RngType::Openssl => {
+                    let mut gen = RngPrivateKeyGenerator::new(OpenSslRng::new());
+                    Box::new(move || {
+                        let key: EvmKey = gen.generate();
+                        let addr = key.derive_address();
+                        (key, addr)
+                    })
+                }
             };
             let mut count = 0u64;
 
@@ -537,6 +571,10 @@ fn search_vanity_solana(
                 }
                 RngType::DevRandom => {
                     let mut gen = RngPrivateKeyGenerator::new(DevRandomRng::new());
+                    Box::new(move || gen.generate())
+                }
+                RngType::Openssl => {
+                    let mut gen = RngPrivateKeyGenerator::new(OpenSslRng::new());
                     Box::new(move || gen.generate())
                 }
                 RngType::Incremental => unreachable!("validated in search_vanity"),
@@ -673,6 +711,10 @@ fn search_vanity_bitcoin(
                 }
                 RngType::DevRandom => {
                     let mut gen = RngPrivateKeyGenerator::new(DevRandomRng::new());
+                    Box::new(move || gen.generate())
+                }
+                RngType::Openssl => {
+                    let mut gen = RngPrivateKeyGenerator::new(OpenSslRng::new());
                     Box::new(move || gen.generate())
                 }
                 RngType::Incremental => unreachable!("validated in search_vanity"),
@@ -925,6 +967,7 @@ fn rng_display_name(rng_type: RngType) -> &'static str {
     match rng_type {
         RngType::ThreadRng => "ThreadRng (ChaCha20)",
         RngType::DevRandom => "/dev/random",
+        RngType::Openssl => "OpenSSL (RAND_bytes)",
         RngType::Incremental => "Incremental (secp256k1 point addition)",
     }
 }
@@ -1091,6 +1134,7 @@ mod tests {
     fn test_rng_display_name() {
         assert_eq!(rng_display_name(RngType::ThreadRng), "ThreadRng (ChaCha20)");
         assert_eq!(rng_display_name(RngType::DevRandom), "/dev/random");
+        assert_eq!(rng_display_name(RngType::Openssl), "OpenSSL (RAND_bytes)");
         assert_eq!(
             rng_display_name(RngType::Incremental),
             "Incremental (secp256k1 point addition)"
