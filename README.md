@@ -6,7 +6,7 @@ A Rust library and CLI for generating cryptographically secure blockchain privat
 
 - **Type-Safe Key Generation**: Compile-time guarantees for different blockchain key types
 - **Multi-Blockchain Support**: Generate keys for EVM and Solana with the same API
-- **Flexible RNG Options**: Use thread-local RNG or system entropy (`/dev/random`)
+- **Flexible RNG Options**: Use thread-local RNG, system entropy (`/dev/random`), or the system OpenSSL library
 - **Automatic Validation**: Built-in validation with automatic retry for invalid keys
 - **Composable Architecture**: Trait-based design for easy extension to new blockchains
 - **CLI with Vanity Search**: Generate, derive, and search for vanity addresses
@@ -28,6 +28,9 @@ multichain-keygen generate --type solana
 
 # With /dev/random entropy (Unix only)
 multichain-keygen generate --type evm --rng dev-random
+
+# With the system OpenSSL library (RAND_bytes, cross-platform)
+multichain-keygen generate --type evm --rng openssl
 
 # With incremental EC point addition (EVM only, fastest)
 multichain-keygen generate --rng incremental
@@ -183,6 +186,27 @@ fn main() {
 }
 ```
 
+### Using OpenSslRng (cross-platform)
+
+Backed by the system OpenSSL library (`RAND_bytes`). Binds to `libcrypto` via
+FFI — it does **not** shell out to the `openssl` binary. Requires the system
+OpenSSL development libraries at build time.
+
+```rust
+use multichain_keygen::{
+    OpenSslRng, RngPrivateKeyGenerator, PrivateKeyGenerator,
+    PrivateKey, evm::PrivateKey as EvmKey,
+};
+
+fn main() {
+    let rng = OpenSslRng::new();
+    let mut generator = RngPrivateKeyGenerator::new(rng);
+    let private_key: EvmKey = generator.generate();
+
+    println!("Private key: {}", private_key.to_string());
+}
+```
+
 ## Architecture
 
 The library uses a trait-based, type-safe architecture that separates concerns and enables easy extension to new blockchain networks.
@@ -248,6 +272,7 @@ pub trait FillBytes {
 #### `rng` - Random Number Generation
 - `ThreadRngFillBytes` - Wrapper around `rand::thread_rng()`
 - `DevRandomRng` - System entropy from `/dev/random` (Unix-like systems)
+- `OpenSslRng` - System OpenSSL library via `RAND_bytes` (cross-platform)
 
 ### Design Benefits
 
@@ -304,6 +329,15 @@ System entropy source using `/dev/random` (Unix only, may block):
 
 ```rust
 let rng = DevRandomRng::new();
+```
+
+#### `OpenSslRng`
+
+System OpenSSL library via `RAND_bytes` (cross-platform; requires system
+OpenSSL development libraries at build time):
+
+```rust
+let rng = OpenSslRng::new();
 ```
 
 ## Examples
@@ -390,6 +424,7 @@ where
 - **Entropy Quality**: Uses cryptographically secure random number generators
   - `ThreadRngFillBytes` uses `rand::thread_rng()` (ChaCha20-based CSPRNG)
   - `DevRandomRng` reads from `/dev/random` for kernel-level entropy
+  - `OpenSslRng` uses the system OpenSSL library's `RAND_bytes` (DRBG seeded from the OS)
 - **Key Validation**: All generated keys are validated before being returned
   - EVM keys: Must be non-zero and within secp256k1 curve order
   - Solana keys: Must be non-zero 32-byte arrays
@@ -402,7 +437,7 @@ where
 - **No Network Access**: All operations are local and offline
 
 ### Best Practices
-1. Always use cryptographically secure RNGs (`ThreadRngFillBytes` or `DevRandomRng`)
+1. Always use cryptographically secure RNGs (`ThreadRngFillBytes`, `DevRandomRng`, or `OpenSslRng`)
 2. Never log or print private keys in production
 3. Store private keys encrypted at rest
 4. Consider using hardware security modules (HSMs) for production key storage
@@ -414,6 +449,7 @@ where
 |----------|-------|-------|---------|-----|
 | ThreadRngFillBytes | Yes | Yes | Yes | Yes |
 | DevRandomRng | Yes | Yes | No | Yes |
+| OpenSslRng | Yes | Yes | Yes | Yes |
 
 ## Testing
 
@@ -454,6 +490,7 @@ cargo llvm-cov --open
 - `secp256k1` - ECDSA secp256k1 operations (EVM)
 - `keccak-asm` - Keccak-256 hashing (Ethereum address derivation)
 - `rand` - Random number generation
+- `openssl` - System OpenSSL bindings (`--rng openssl` entropy source)
 - `ed25519-dalek` - Ed25519 signing keys (Solana)
 - `bs58` - Base58 encoding/decoding (Solana addresses)
 - `clap` - CLI argument parsing

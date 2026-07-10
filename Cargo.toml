@@ -30,6 +30,7 @@ bs58 = "0.5"
 sha2 = "0.10"
 ripemd = "0.1"
 bech32 = "0.11"
+openssl = "0.10"
 
 [dev-dependencies]
 # Add any test-specific dependencies here
