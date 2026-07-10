@@ -1015,3 +1015,120 @@ fn format_number(n: u64) -> String {
 
     result.chars().rev().collect()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_hex_pattern_even_length_prefix() {
+        let (bytes, mask) = parse_hex_pattern("dead", true);
+        assert_eq!(bytes, vec![0xde, 0xad]);
+        assert_eq!(mask, vec![0xFF, 0xFF]);
+    }
+
+    #[test]
+    fn test_parse_hex_pattern_odd_length_prefix() {
+        let (bytes, mask) = parse_hex_pattern("dea", true);
+        assert_eq!(bytes, vec![0xde, 0xa0]);
+        assert_eq!(mask, vec![0xFF, 0xF0]);
+    }
+
+    #[test]
+    fn test_parse_hex_pattern_odd_length_suffix() {
+        let (bytes, mask) = parse_hex_pattern("ead", false);
+        assert_eq!(bytes, vec![0x0e, 0xad]);
+        assert_eq!(mask, vec![0x0F, 0xFF]);
+    }
+
+    #[test]
+    fn test_parse_hex_pattern_strips_0x_prefix() {
+        let (bytes, mask) = parse_hex_pattern("0xdead", true);
+        assert_eq!(bytes, vec![0xde, 0xad]);
+        assert_eq!(mask, vec![0xFF, 0xFF]);
+    }
+
+    #[test]
+    fn test_is_matching_exact() {
+        assert!(is_matching(&[0xde, 0xad], &[0xde, 0xad], &[0xFF, 0xFF]));
+    }
+
+    #[test]
+    fn test_is_matching_respects_mask() {
+        // High nibble of second byte is masked out, so 0xa0 vs 0xaf both match.
+        assert!(is_matching(&[0xde, 0xaf], &[0xde, 0xa0], &[0xFF, 0xF0]));
+        assert!(!is_matching(&[0xde, 0xbf], &[0xde, 0xa0], &[0xFF, 0xF0]));
+    }
+
+    #[test]
+    fn test_is_matching_length_mismatch() {
+        assert!(!is_matching(&[0xde], &[0xde, 0xad], &[0xFF, 0xFF]));
+    }
+
+    #[test]
+    fn test_calculate_hex_search_space() {
+        assert_eq!(calculate_hex_search_space(&None, &None), 1);
+        assert_eq!(calculate_hex_search_space(&Some("de".to_string()), &None), 256);
+        assert_eq!(
+            calculate_hex_search_space(&Some("de".to_string()), &Some("ad".to_string())),
+            256 * 256
+        );
+    }
+
+    #[test]
+    fn test_calculate_base58_search_space() {
+        assert_eq!(calculate_base58_search_space(&None, &None), 1);
+        assert_eq!(calculate_base58_search_space(&Some("ab".to_string()), &None), 58 * 58);
+    }
+
+    #[test]
+    fn test_calculate_bech32_search_space() {
+        assert_eq!(calculate_bech32_search_space(&None, &None), 1);
+        assert_eq!(calculate_bech32_search_space(&Some("qp".to_string()), &None), 32 * 32);
+    }
+
+    #[test]
+    fn test_rng_display_name() {
+        assert_eq!(rng_display_name(RngType::ThreadRng), "ThreadRng (ChaCha20)");
+        assert_eq!(rng_display_name(RngType::DevRandom), "/dev/random");
+        assert_eq!(
+            rng_display_name(RngType::Incremental),
+            "Incremental (secp256k1 point addition)"
+        );
+    }
+
+    #[test]
+    fn test_format_duration_seconds() {
+        assert_eq!(format_duration(45), "45s");
+    }
+
+    #[test]
+    fn test_format_duration_minutes() {
+        assert_eq!(format_duration(125), "2m 5s");
+    }
+
+    #[test]
+    fn test_format_duration_hours() {
+        assert_eq!(format_duration(3725), "1h 2m");
+    }
+
+    #[test]
+    fn test_format_duration_days() {
+        assert_eq!(format_duration(90000), "1d 1h");
+    }
+
+    #[test]
+    fn test_format_number_small() {
+        assert_eq!(format_number(42), "42");
+    }
+
+    #[test]
+    fn test_format_number_thousands() {
+        assert_eq!(format_number(1234567), "1,234,567");
+    }
+
+    #[test]
+    fn test_format_number_exact_thousand() {
+        assert_eq!(format_number(1000), "1,000");
+    }
+}
