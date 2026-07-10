@@ -85,7 +85,7 @@ docker build -t multichain-keygen .
 # Override the base image / tag (e.g. a mirrored namespace or pinned version)
 docker build \
   --build-arg RUST_IMAGE=your-namespace/dhi-rust \
-  --build-arg RUST_TAG=1-alpine \
+  --build-arg RUST_TAG=1.96.1-alpine3.23 \
   -t multichain-keygen .
 ```
 

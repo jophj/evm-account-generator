@@ -5,7 +5,7 @@
 # Verify the exact available tag in the DHI Rust catalog before building —
 # the dev variant adds the `-dev` suffix (e.g. `1-alpine` -> `1-alpine-dev`).
 ARG RUST_IMAGE=dhi.io/rust
-ARG RUST_TAG=1-alpine
+ARG RUST_TAG=1.96.1-alpine3.23
 
 # ---- build stage (dev variant: shell + Rust toolchain) ----
 FROM ${RUST_IMAGE}:${RUST_TAG}-dev AS build
