@@ -380,6 +380,22 @@ cargo test private_key_generator
 cargo test --doc
 ```
 
+### Coverage
+
+Coverage is measured with [`cargo-llvm-cov`](https://github.com/taiki-e/cargo-llvm-cov) and checked in CI on every push and pull request (see `.github/workflows/ci.yml`).
+
+```bash
+# One-time setup
+rustup component add llvm-tools-preview
+cargo install cargo-llvm-cov
+
+# Print a per-file coverage summary
+cargo llvm-cov --summary-only
+
+# Generate an HTML report and open it
+cargo llvm-cov --open
+```
+
 ## Dependencies
 
 ### Core
