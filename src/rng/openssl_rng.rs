@@ -14,13 +14,7 @@ use crate::FillBytes;
 /// for environments that require OpenSSL as the entropy source — for example,
 /// FIPS or other compliance policies.
 ///
-/// # Platform Support
-///
-/// - ✅ Linux: Fully supported
-/// - ✅ macOS: Fully supported
-/// - ✅ BSD: Fully supported
-/// - ✅ Windows: Fully supported
-///
+/// # Platform Support: Linux, macOS, BSD, Windows.
 /// Requires the system OpenSSL development libraries to be available at build time.
 ///
 /// # Panics
