@@ -21,7 +21,7 @@
 //! ## Basic Usage with EVM
 //!
 //! ```
-//! use evm_account_generator::{
+//! use multichain_keygen::{
 //!     RngPrivateKeyGenerator, PrivateKeyGenerator, ThreadRngFillBytes, PrivateKey,
 //!     evm::PrivateKey as EvmKey,
 //! };
@@ -34,7 +34,7 @@
 //! ## Using with Multiple Blockchains
 //!
 //! ```
-//! use evm_account_generator::{
+//! use multichain_keygen::{
 //!     RngPrivateKeyGenerator, PrivateKeyGenerator, ThreadRngFillBytes, PrivateKey,
 //!     evm::PrivateKey as EvmKey,
 //!     solana::PrivateKey as SolanaKey,
@@ -54,7 +54,7 @@
 //! ## Writing Generic Functions
 //!
 //! ```
-//! use evm_account_generator::{
+//! use multichain_keygen::{
 //!     RngPrivateKeyGenerator, PrivateKeyGenerator, PrivateKey, FillBytes,
 //! };
 //!

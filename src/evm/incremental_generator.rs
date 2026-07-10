@@ -14,7 +14,7 @@
 //! # Examples
 //!
 //! ```
-//! use evm_account_generator::{PrivateKey, evm::EvmIncrementalGenerator};
+//! use multichain_keygen::{PrivateKey, evm::EvmIncrementalGenerator};
 //!
 //! let mut gen = EvmIncrementalGenerator::new();
 //! let (key, address) = gen.generate();

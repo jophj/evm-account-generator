@@ -24,7 +24,7 @@ use crate::FillBytes;
 /// # Examples
 ///
 /// ```rust
-/// use evm_account_generator::{
+/// use multichain_keygen::{
 ///     RngPrivateKeyGenerator, PrivateKeyGenerator, ThreadRngFillBytes,
 ///     PrivateKey, evm::PrivateKey as EvmKey,
 /// };
@@ -47,7 +47,7 @@ impl ThreadRngFillBytes {
     /// # Examples
     ///
     /// ```rust
-    /// use evm_account_generator::ThreadRngFillBytes;
+    /// use multichain_keygen::ThreadRngFillBytes;
     ///
     /// let rng = ThreadRngFillBytes::new();
     /// ```
@@ -66,7 +66,7 @@ impl FillBytes for ThreadRngFillBytes {
     /// # Examples
     ///
     /// ```rust
-    /// use evm_account_generator::{FillBytes, ThreadRngFillBytes};
+    /// use multichain_keygen::{FillBytes, ThreadRngFillBytes};
     ///
     /// let mut rng = ThreadRngFillBytes::new();
     /// let mut buffer = [0u8; 32];

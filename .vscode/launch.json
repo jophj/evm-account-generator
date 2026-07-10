@@ -7,15 +7,15 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'evm-account-generator'",
+            "name": "Debug executable 'multichain-keygen'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=evm-account-generator",
-                    "--package=evm-account-generator"
+                    "--bin=multichain-keygen",
+                    "--package=multichain-keygen"
                 ],
                 "filter": {
-                    "name": "evm-account-generator",
+                    "name": "multichain-keygen",
                     "kind": "bin"
                 }
             },
@@ -25,16 +25,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'evm-account-generator'",
+            "name": "Debug unit tests in executable 'multichain-keygen'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=evm-account-generator",
-                    "--package=evm-account-generator"
+                    "--bin=multichain-keygen",
+                    "--package=multichain-keygen"
                 ],
                 "filter": {
-                    "name": "evm-account-generator",
+                    "name": "multichain-keygen",
                     "kind": "bin"
                 }
             },

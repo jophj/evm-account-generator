@@ -2,7 +2,7 @@
 //!
 //! This demonstrates the difference between random and sequential key generation.
 
-use evm_account_generator::{
+use multichain_keygen::{
     PrivateKey, PrivateKeyGenerator, RngPrivateKeyGenerator, 
     SequentialPrivateKeyGenerator, ThreadRngFillBytes,
     evm::PrivateKey as EvmKey,

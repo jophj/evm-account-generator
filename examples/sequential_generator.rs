@@ -3,7 +3,7 @@
 //! This generator produces deterministic sequences of private keys by starting
 //! from a seed and incrementing by 1 for each new key.
 
-use evm_account_generator::{
+use multichain_keygen::{
     PrivateKey, PrivateKeyGenerator, SequentialPrivateKeyGenerator,
     evm::PrivateKey as EvmKey,
     solana::PrivateKey as SolanaKey,

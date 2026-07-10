@@ -14,7 +14,7 @@
 //! # Examples
 //!
 //! ```rust
-//! use evm_account_generator::{
+//! use multichain_keygen::{
 //!     RngPrivateKeyGenerator, PrivateKeyGenerator, ThreadRngFillBytes,
 //!     PrivateKey, bitcoin::PrivateKey as BitcoinKey,
 //! };

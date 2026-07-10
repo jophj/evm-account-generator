@@ -17,7 +17,7 @@
 //! - **EVM (Ethereum)**: 32-byte ECDSA secp256k1 keys
 //! - **Solana**: 64-byte Ed25519 keypairs
 
-use evm_account_generator::{
+use multichain_keygen::{
     PrivateKey, PrivateKeyGenerator, RngPrivateKeyGenerator, FillBytes, ThreadRngFillBytes,
     evm::PrivateKey as EvmKey,
     solana::PrivateKey as SolanaKey,

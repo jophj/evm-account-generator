@@ -9,7 +9,7 @@
 //! - Doesn't block (unlike /dev/random)
 //! - Is fast and efficient
 
-use evm_account_generator::{
+use multichain_keygen::{
     RngPrivateKeyGenerator,
     PrivateKeyGenerator,
     ThreadRngFillBytes,
@@ -18,7 +18,7 @@ use evm_account_generator::{
 };
 
 fn main() {
-    println!("EVM Account Generator - Basic Usage Example");
+    println!("Multichain Keygen - Basic Usage Example");
     println!("==========================================\n");
 
     // Step 1: Create a cryptographically secure RNG

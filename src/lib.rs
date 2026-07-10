@@ -1,4 +1,4 @@
-//! # EVM Account Generator Library
+//! # Multichain Keygen Library
 //! 
 //! A type-safe, composable library for generating blockchain private keys.
 //! Supports multiple blockchain networks including EVM (Ethereum) and Solana.
@@ -16,7 +16,7 @@
 //! ### Generate an EVM Private Key
 //!
 //! ```rust
-//! use evm_account_generator::{
+//! use multichain_keygen::{
 //!     RngPrivateKeyGenerator, PrivateKeyGenerator, ThreadRngFillBytes,
 //!     PrivateKey, evm::PrivateKey as EvmKey,
 //! };
@@ -34,7 +34,7 @@
 //! ### Generate Keys for Multiple Blockchains
 //!
 //! ```rust
-//! use evm_account_generator::{
+//! use multichain_keygen::{
 //!     RngPrivateKeyGenerator, PrivateKeyGenerator, ThreadRngFillBytes,
 //!     PrivateKey,
 //!     evm::PrivateKey as EvmKey,
