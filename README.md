@@ -65,6 +65,57 @@ multichain-keygen vanity --type solana --prefix jop
 multichain-keygen vanity --type solana --suffix xyz
 ```
 
+## Docker
+
+The CLI ships with a multi-stage [`Dockerfile`](Dockerfile) built on
+[Docker Hardened Images](https://www.docker.com/products/hardened-images/) (DHI) —
+minimal, near-zero-CVE, nonroot base images. It compiles a musl release binary in a
+`dhi.io/rust:*-dev` build stage and copies just the binary (plus its one dynamic
+dependency, `libgcc_s.so.1`) into a minimal `dhi.io/alpine-base` runtime stage that
+runs as a nonroot user. The final image is ~4MB.
+
+> **Prerequisite:** the `dhi.io/*` base images require your organization's DHI
+> subscription entitlement. The build and runtime images/tags are all build args, so
+> you can point at a mirrored namespace or different tags instead (see below).
+
+### Build
+
+```bash
+docker build -t multichain-keygen .
+
+# Override the base images / tags (e.g. a mirrored namespace or different versions)
+docker build \
+  --build-arg RUST_IMAGE=your-namespace/dhi-rust \
+  --build-arg RUST_TAG=1.96.1-alpine3.23 \
+  --build-arg RUNTIME_IMAGE=your-namespace/dhi-alpine-base \
+  --build-arg RUNTIME_TAG=3.23 \
+  -t multichain-keygen .
+```
+
+### Run
+
+The image's entrypoint is the `multichain-keygen` binary, so pass subcommands
+directly to `docker run`:
+
+```bash
+# Generate a key (EVM by default)
+docker run --rm multichain-keygen generate
+
+# Other chains / options
+docker run --rm multichain-keygen generate --type solana -q
+docker run --rm multichain-keygen generate --type bitcoin
+
+# Derive an address (use -i to pipe a key over stdin)
+echo "0x1234...abcdef" | docker run --rm -i multichain-keygen derive --type evm
+
+# Vanity search (uses all container CPUs by default)
+docker run --rm multichain-keygen vanity --prefix dead --type evm
+```
+
+> **Note:** for an even smaller, shell-less runtime you can point `RUNTIME_IMAGE`
+> at the DHI `static` image (e.g. `dhi.io/static:<date>-musl-alpine3.23`); the
+> binary runs there unchanged — see the comment in the `Dockerfile`.
+
 ## Library Usage
 
 Add this to your `Cargo.toml`:
