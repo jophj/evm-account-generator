@@ -65,6 +65,55 @@ multichain-keygen vanity --type solana --prefix jop
 multichain-keygen vanity --type solana --suffix xyz
 ```
 
+## Docker
+
+The CLI ships with a multi-stage [`Dockerfile`](Dockerfile) built on
+[Docker Hardened Images](https://www.docker.com/products/hardened-images/) (DHI) —
+minimal, near-zero-CVE, nonroot base images. It compiles a statically linked
+(musl) release binary in a `dhi.io/rust:*-dev` build stage and copies it into a
+minimal `dhi.io/rust` runtime stage that runs as a nonroot user.
+
+> **Prerequisite:** the `dhi.io/rust` base images require your organization's DHI
+> subscription entitlement. Both the image and tag are build args, so you can point
+> at a mirrored namespace or a pinned tag instead (see below).
+
+### Build
+
+```bash
+docker build -t multichain-keygen .
+
+# Override the base image / tag (e.g. a mirrored namespace or pinned version)
+docker build \
+  --build-arg RUST_IMAGE=your-namespace/dhi-rust \
+  --build-arg RUST_TAG=1-alpine \
+  -t multichain-keygen .
+```
+
+### Run
+
+The image's entrypoint is the `multichain-keygen` binary, so pass subcommands
+directly to `docker run`:
+
+```bash
+# Generate a key (EVM by default)
+docker run --rm multichain-keygen generate
+
+# Other chains / options
+docker run --rm multichain-keygen generate --type solana -q
+docker run --rm multichain-keygen generate --type bitcoin
+
+# Derive an address (use -i to pipe a key over stdin)
+echo "0x1234...abcdef" | docker run --rm -i multichain-keygen derive --type evm
+
+# Vanity search (uses all container CPUs by default)
+docker run --rm multichain-keygen vanity --prefix dead --type evm
+```
+
+> **Note:** the DHI Rust *runtime* variant keeps a shell and toolchain (~650MB
+> image). Because the binary is fully static, you can swap the runtime stage for
+> the smaller, shell-less `dhi.io/static` image — see the comment in the
+> `Dockerfile` for details.
+
 ## Library Usage
 
 Add this to your `Cargo.toml`:
